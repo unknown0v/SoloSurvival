@@ -38,7 +38,8 @@ static func boxes(p: Dictionary) -> Array:
 			var steps: Array = []
 			for i in range(12):
 				var h: float = (i+1)*0.25
-				steps.append([Vector3(0,h*0.5,1.375-i*0.25),Vector3(1.1,h,0.25)])
+				steps.append([Vector3(0,h*0.5,1.675-i*0.25),Vector3(1.1,h,0.25)])
+			steps.append([Vector3(0,2.9,-1.5),Vector3(1.1,0.2,0.6)])
 			return steps
 		"bed": return [[Vector3(0,0.275,0),Vector3(1.2,0.55,2)]]
 		"wall": return [[Vector3(0,1.5,-1.5),Vector3(3,3,0.16)]]
@@ -84,7 +85,7 @@ func visual_piece(p: Dictionary, ghost: Material = null) -> Node3D:
 	if ghost==null and p.kind=="stairs":
 		var collider := CollisionShape3D.new()
 		var ramp := ConvexPolygonShape3D.new()
-		ramp.points = PackedVector3Array([Vector3(-0.55,0,1.5),Vector3(0.55,0,1.5),Vector3(-0.55,0,-1.5),Vector3(0.55,0,-1.5),Vector3(-0.55,3,-1.5),Vector3(0.55,3,-1.5)])
+		ramp.points = PackedVector3Array([Vector3(-0.55,0,1.8),Vector3(0.55,0,1.8),Vector3(-0.55,0,-1.8),Vector3(0.55,0,-1.8),Vector3(-0.55,3,-1.2),Vector3(0.55,3,-1.2),Vector3(-0.55,3,-1.8),Vector3(0.55,3,-1.8)])
 		collider.shape = ramp
 		body.add_child(collider)
 	if ghost==null and p.kind in ["campfire","furnace"] and p.active:
@@ -227,6 +228,7 @@ func clearance_blocked(p: Dictionary, except_id: String = "") -> bool:
 					or (p.kind in Settlement.WALLS and other.kind in Settlement.WALLS and p.edge!=other.edge and p.level==other.level)
 					or (p.kind in ["floor","roof"] and other.kind in ["wall","doorframe"] and p.level==other.level+1)
 					or (p.kind in ["wall","doorframe"] and other.kind in ["floor","roof"] and other.level==p.level+1))
+				joint = joint or Settlement.landing_on_stairs(p,other) or Settlement.landing_on_stairs(other,p)
 				if not joint:
 					return true
 	return false

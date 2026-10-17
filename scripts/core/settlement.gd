@@ -89,10 +89,8 @@ func supports(records: Array) -> Dictionary:
 						best = maxf(best,value-0.04)
 					elif p.kind in ["floor","roof"] and source.kind in BEARING_WALLS and source.level+1==p.level:
 						best = maxf(best,value-0.08)
-				elif p.kind=="floor" and source.kind=="stairs" and source.level+1==p.level and absf(float(p.y)-float(source.y))<0.05:
-					var step: Vector2i = edge_step(int(source.edge))
-					if int(p.cell[0])==int(source.cell[0])+step.x and int(p.cell[1])==int(source.cell[1])+step.y:
-						best = maxf(best,value-0.08)
+				elif landing_on_stairs(p,source):
+					best = maxf(best,value-0.08)
 				elif p.kind in ["floor","roof"] and source.kind=="floor" and source.level==p.level and absf(float(p.y)-float(source.y))<0.05:
 					var distance: int = absi(int(p.cell[0])-int(source.cell[0]))+absi(int(p.cell[1])-int(source.cell[1]))
 					if distance==1:
@@ -369,3 +367,9 @@ func notify_changed() -> void:
 	if not batching:
 		dirty = false
 		changed.emit()
+
+static func landing_on_stairs(floor_piece: Dictionary, stairs: Dictionary) -> bool:
+	if floor_piece.kind!="floor" or stairs.kind!="stairs" or floor_piece.level!=stairs.level+1 or absf(float(floor_piece.y)-float(stairs.y))>0.05:
+		return false
+	var step: Vector2i = edge_step(int(stairs.edge))
+	return int(floor_piece.cell[0])==int(stairs.cell[0])+step.x and int(floor_piece.cell[1])==int(stairs.cell[1])+step.y
