@@ -108,7 +108,6 @@ func _physics_process(dt: float) -> void:
 		velocity.y = move_toward(velocity.y,2.4 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
 	elif is_on_floor():
 		velocity.y = 6 if Input.is_physical_key_pressed(KEY_SPACE) else -2
-		fall_velocity = 0
 	else:
 		velocity.y -= 18*dt
 	var impact_speed: float = velocity.y
