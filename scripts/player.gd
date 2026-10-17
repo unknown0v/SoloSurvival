@@ -132,7 +132,6 @@ func _physics_process(dt: float) -> void:
 		cooldown = 0.65
 		game.primary_action()
 	game.prompt = interaction_prompt()
-	game.tick_survival(dt,sprint and direction.length_squared()>0.1,camera.global_position.y < -0.25)
 
 func interaction_prompt() -> String:
 	if not hit.is_empty():

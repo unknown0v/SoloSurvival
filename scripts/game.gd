@@ -126,6 +126,7 @@ func _process(dt: float) -> void:
 		elapsed += dt
 		hour = fmod(hour+dt*24.0/1800.0,24)
 		update_light()
+		tick_survival(dt,Vector2(player.velocity.x,player.velocity.z).length()>4.5,player.camera.global_position.y < -0.25)
 		var output: String = crafts.tick(dt,bag)
 		if output!="":
 			say("Crafted "+str(items.ITEMS[output].name))

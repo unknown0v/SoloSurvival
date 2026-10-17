@@ -14,7 +14,7 @@ Branch: `codex/godot-first-playable`. Source and all engine work are remote; not
 - Original procedural meshes, materials and impact audio; no proprietary Rust assets or code.
 
 ## Verification
-Engine compilation, headless tests, exports and browser runtime checks are not yet executed for this commit. Cloud workflows and tests are being added. Source implementation does not establish playability or Rust fidelity.
+Cloud run 39039781974 compiled the Godot scripts and passed 43 assertions, including the real 3D scene, physical terrain collision, gathering, tool durability, crafting, inventory and save corruption/recovery. It generated 232 resource nodes. Web export then stopped because the setup script extracted threaded templates while the preset requires single-threaded templates. That extraction is corrected in this commit. Exports and browser smoke checks remain pending; no human playtest or laptop performance claim.
 
 ## Fidelity gaps and priorities
 This is a first milestone, not a finished Rust recreation. Visuals are procedural and simplified. Construction, repair/upkeep, processing, weapons, armor, wildlife, enemy AI, monuments, loot, weather, advanced progression, animations and native quality upgrades remain. No human playtest, laptop performance measurement or real-provider REA analysis has occurred. There is no network gameplay or game server.

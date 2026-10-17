@@ -36,7 +36,7 @@ def main():
             else:
                 templates = Path.home() / ".local/share/godot/export_templates" / f"{VERSION}.stable"
                 templates.mkdir(parents=True, exist_ok=True)
-                required = ["web_release.zip", "web_debug.zip", "windows_release_x86_64.exe", "windows_debug_x86_64.exe"]
+                required = ["web_nothreads_release.zip", "web_nothreads_debug.zip", "windows_release_x86_64.exe", "windows_debug_x86_64.exe"]
                 for filename in required:
                     with archive.open("templates/" + filename) as src, (templates / filename).open("wb") as dest:
                         shutil.copyfileobj(src, dest)
