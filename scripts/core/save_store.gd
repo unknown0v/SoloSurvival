@@ -2,6 +2,7 @@ extends RefCounted
 const Inventory = preload("res://scripts/core/inventory.gd")
 const Settlement = preload("res://scripts/core/settlement.gd")
 const Crafting = preload("res://scripts/core/crafting.gd")
+const CURRENT_VERSION: int = 4
 const MAX_BYTES: int = 2097152
 var path: String
 var writable: bool = false
@@ -20,7 +21,7 @@ static func position_valid(pos: Variant) -> bool:
 static func validate(data: Variant) -> String:
 	if not data is Dictionary:
 		return "Save payload must be an object."
-	if (data.get("version") != 1 and data.get("version") != 2 and data.get("version") != 3) or data.get("seed") != 197403:
+	if not supported_world(data):
 		return "Unsupported world version or seed."
 	if not position_valid(data.get("position")) or not number(data.get("yaw"),-100000,100000) or not number(data.get("pitch"),-1.5,1.5):
 		return "Invalid player transform."
@@ -45,11 +46,11 @@ static func validate(data: Variant) -> String:
 			return "Invalid resource state."
 	if data.version>=2 and not Settlement.valid(data.get("structures")):
 		return "Invalid structures, support graph or station contents."
-	if data.version==3:
+	if data.version>=3:
 		var maintenance: Variant = data.get("maintenance")
 		if not maintenance is Dictionary or not number(maintenance.get("grace"),0,1800) or not number(maintenance.get("clock"),0,300):
 			return "Invalid upkeep timer."
-	# Older worlds remain readable; new worlds write version 3.
+	# Older worlds remain readable; new worlds write version 4.
 	if not data.get("corpses") is Array or data.corpses.size()>32:
 		return "Invalid death containers."
 	var seen: Dictionary = {}
@@ -80,7 +81,7 @@ static func unwrap(text: String) -> Dictionary:
 	var data: Variant = inner.data
 	var error: String = validate(data)
 	if error != "":
-		return {"error":error, "unsupported":data is Dictionary and ((data.get("version") != 1 and data.get("version") != 2 and data.get("version") != 3) or data.get("seed") != 197403)}
+		return {"error":error, "unsupported":data is Dictionary and not supported_world(data)}
 	return {"data":data}
 
 func read_file(filename: String) -> Dictionary:
@@ -154,3 +155,7 @@ static func settlement_state(data: Dictionary) -> Dictionary:
 		state.grace = float(data.maintenance.grace)
 		state.clock = float(data.maintenance.clock)
 	return state
+
+static func supported_world(data: Dictionary) -> bool:
+	var version: Variant = data.get("version")
+	return number(version,1,CURRENT_VERSION) and float(version)==floorf(float(version)) and data.get("seed")==197403

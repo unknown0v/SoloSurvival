@@ -231,7 +231,7 @@ func build_inventory() -> void:
 	guide.name = "Building guide"
 	tabs.add_child(guide)
 	guide.add_child(label("BUILD YOUR SHORELINE HOME",24))
-	guide.add_child(label("Craft a building plan and hammer. Press B to build.\n1 foundation · 2 wall · 3 floor · 4 roof\n5 doorframe · 6 door · 7 storage · 8 fire · 9 furnace\nR rotates; green preview = valid; left click places.\n\nFoundations need dry, flat ground. Walls stand on\nfoundations/floors. Floors/roofs sit above walls.\nDoors fit doorframes; stations sit on platforms.\nAim at the supporting section to select its level.\n\nHammer selected: click repair · U upgrade · X dismantle.\nTwig → wood → stone → metal. Aim for costs/status.\nRemoving support collapses unsupported pieces.\nEmpty ALL affected containers before dismantling.\nNo demolition refund. Max 256 pieces, four storeys.\nG cycles cupboard, sleeping bag and workbench.\nBind a bag with E. A bench unlocks the metal pickaxe.\nCupboards consume upkeep every 5 simulated minutes.\nInitial new/migrated-world grace is 30 minutes.\n\nE opens a station or toggles a door. Drag items between\nyour bag and its slots. Fire: 2 berries + 1 wood → ration.\nFurnace: 2 ore + 1 wood → metal. Start the station.\nOutputs wait when full; no offline processing.",16))
+	guide.add_child(label("Craft a building plan and hammer. Press B to build.\n1 foundation · 2 wall · 3 floor · 4 roof\n5 doorframe · 6 door · 7 storage · 8 fire · 9 furnace\nR rotates; green preview = valid; left click places.\n\nFoundations need dry, flat ground. Walls stand on\nfoundations/floors. Floors/roofs sit above walls.\nDoors fit doorframes; stations sit on platforms.\nAim at the supporting section to select its level.\n\nHammer selected: click repair · U upgrade · X dismantle.\nTwig → wood → stone → metal. Aim for costs/status.\nRemoving support collapses unsupported pieces.\nEmpty ALL affected containers before dismantling.\nNo demolition refund. Max 256 pieces, four storeys.\nG cycles cupboard, sleeping bag, workbench,\nhalf wall, window, stairs and bed.\nAim at stairs to snap the upper landing floor.\nKeep the tile above stairs open as a stairwell.\nBind a bag with E. A bench unlocks the metal pickaxe.\nCupboards consume upkeep every 5 simulated minutes.\nInitial new/migrated-world grace is 30 minutes.\n\nE opens a station or toggles a door. Drag items between\nyour bag and its slots. Fire: 2 berries + 1 wood → ration.\nFurnace: 2 ore + 1 wood → metal. Start the station.\nOutputs wait when full; no offline processing.",16))
 	station_panel = VBoxContainer.new()
 	station_panel.name = "Container"
 	tabs.add_child(station_panel)
@@ -323,7 +323,7 @@ func _process(dt: float) -> void:
 	start_button.text = "RESUME  /  ENTER" if game.paused else "EMBARK  /  ENTER"
 	menu.visible = game.menu_open
 	dead.visible = float(game.stats.health)<=0
-	respawn_button.text = "RETURN TO SHORE" if game.settlement.respawn_piece().is_empty() else "RESPAWN AT YOUR SLEEPING BAG"
+	respawn_button.text = "RETURN TO SHORE" if game.settlement.respawn_piece().is_empty() else "RESPAWN AT YOUR BOUND BED / BAG"
 	if dead.visible:
 		title.hide()
 		menu.hide()

@@ -198,7 +198,7 @@ func base_progression_tests() -> void:
 	check(not model.strike(foundation.id,-20) and foundation.hp==72,"Negative damage cannot create health")
 	model.place(model.make_piece("foundation",[1,0],10,0,0),bag)
 	var home: Dictionary = model.place(model.make_piece("sleeping_bag",[1,0],10,0,0),bag)
-	check(not home.is_empty() and model.bind_bag(home.id),"Sleeping bag can bind respawn")
+	check(not home.is_empty() and model.bind_spawn(home.id),"Sleeping bag can bind respawn")
 	check(model.respawn_piece().id==home.id,"Bound bag is selected by the owner")
 	var bench: Dictionary = model.place(model.make_piece("workbench",[0,0],10,0,0),bag)
 	check(not bench.is_empty(),"Workbench charges construction resources")
@@ -235,6 +235,93 @@ func base_progression_tests() -> void:
 	model.tick(300)
 	check(notifications[0]==1,"Upkeep coalesces component mutations into one notification")
 	check(distant.hp<80,"Disconnected base is not protected by another cupboard")
+
+func construction_extension_tests() -> void:
+	var model = Settlement.new()
+	var bag = Inventory.new(36)
+	bag.add("wood",3000)
+	bag.add("stone",1000)
+	bag.add("metal",100)
+	bag.add("cloth",100)
+	model.place(model.make_piece("foundation",[0,0],10,0,0),bag)
+	var half: Dictionary = model.place(model.make_piece("half_wall",[0,0],10,0,1),bag)
+	check(not half.is_empty(),"Half wall snaps and pays its cost")
+	check(model.place(model.make_piece("floor",[0,0],10,1,0),bag).is_empty(),"Half wall cannot pretend to support a full-height ceiling")
+	var window: Dictionary = model.place(model.make_piece("window_frame",[0,0],10,0,3),bag)
+	check(not window.is_empty(),"Window frame occupies a wall socket")
+	check(model.place(model.make_piece("wall",[0,0],10,0,3),bag).is_empty(),"Window and wall share exclusive sockets")
+	check(model.place(model.make_piece("door",[0,0],10,0,3),bag).is_empty(),"A window cannot act as a doorframe")
+	var stairs: Dictionary = model.place(model.make_piece("stairs",[0,0],10,0,0),bag)
+	check(not stairs.is_empty(),"Stairs stand on a supported platform")
+	check(model.reason(model.make_piece("floor",[0,0],10,1,0))=="Leave an open stairwell above stairs.","Solid ceiling cannot block the stairwell")
+	var landing: Dictionary = model.place(model.make_piece("floor",[0,-1],10,1,0),bag)
+	check(not landing.is_empty(),"Stairs support the adjacent upper landing")
+	check(model.dismantle(stairs.id) and model.find(landing.id).is_empty(),"Removing stairs collapses an otherwise unsupported landing")
+	var bed: Dictionary = model.place(model.make_piece("bed",[0,0],10,0,0),bag)
+	check(not bed.is_empty() and model.bind_spawn(bed.id),"Bed binds a persistent spawn")
+	var sleeping: Dictionary = model.place(model.make_piece("sleeping_bag",[0,0],10,0,0),bag)
+	model.bind_spawn(sleeping.id)
+	check(not bed.respawn and sleeping.respawn,"Exactly one bed or bag is bound")
+	var data: Dictionary = fixture()
+	data.version = 4
+	data.structures = model.pieces.duplicate(true)
+	data.maintenance = {"grace":1800.0,"clock":0.0}
+	check(Save.unwrap(Save.encode_save(data)).has("data"),"Schema four validates extended pieces and preserves prior upkeep")
+	check(Settlement.valid(JSON.parse_string(JSON.stringify(model.pieces))),"Extended geometry identities survive JSON roundtrip")
+
+func stairs_scene_test(game) -> void:
+	var data: Dictionary = Save.unwrap(FileAccess.get_file_as_string("res://build/progression-fixture.json")).data
+	var cell: Array = [roundi(float(data.position[0])/3),roundi((float(data.position[2])-4.3)/3)]
+	var y: float = snappedf(game.world.math.height(cell[0]*3,cell[1]*3)+0.4,0.25)
+	game.settlement.pieces.clear()
+	game.buildings.rebuild()
+	game.bag.add("wood",500)
+	game.player.position = Vector3(cell[0]*3,y+0.1,cell[1]*3+1.15)
+	game.player.rotation.y = 0
+	game.player.velocity = Vector3.ZERO
+	game.playing = true
+	game.menu_open = false
+	game.paused = false
+	var root_piece: Dictionary = game.settlement.place(game.settlement.make_piece("foundation",cell,y,0,0),game.bag)
+	var stairs: Dictionary = game.settlement.place(game.settlement.make_piece("stairs",cell,y,0,0),game.bag)
+	var landing: Dictionary = game.settlement.place(game.settlement.make_piece("floor",[cell[0],int(cell[1])-1],y,1,0),game.bag)
+	check(not root_piece.is_empty() and not stairs.is_empty() and not landing.is_empty(),"Real scene instantiates stair and landing colliders")
+	for i in range(3):
+		await physics_frame
+	var walk := InputEventKey.new()
+	walk.physical_keycode = KEY_W
+	walk.pressed = true
+	Input.parse_input_event(walk)
+	var climbed: bool = false
+	for i in range(220):
+		await physics_frame
+		if game.player.position.y>y+2.85 and game.player.position.z<float(cell[1])*3-1.7:
+			climbed = true
+			break
+	walk = InputEventKey.new()
+	walk.physical_keycode = KEY_W
+	walk.pressed = false
+	Input.parse_input_event(walk)
+	for i in range(8):
+		await physics_frame
+	if not climbed:
+		print("STAIR_CLIMB_DIAGNOSTIC position="+str(game.player.position)+" velocity="+str(game.player.velocity)+" floor="+str(game.player.is_on_floor()))
+	check(climbed and absf(game.player.position.y-y-3)<0.25,"Actual first-person controller walks stairs onto the upper floor")
+	game.bag.add("cloth",100)
+	game.bag.add("metal",50)
+	game.player.position = Vector3(cell[0]*3+1,y+3.1,(int(cell[1])-1)*3)
+	for i in range(3):
+		await physics_frame
+	var bed_candidate: Dictionary = game.settlement.make_piece("bed",[cell[0],int(cell[1])-1],y,1,0)
+	check(game.buildings.check_placement(bed_candidate)=="","Bed placement clears the player and upper platform")
+	var bed: Dictionary = game.settlement.place(bed_candidate,game.bag)
+	check(not bed.is_empty() and game.settlement.bind_spawn(bed.id),"Real scene binds an upper-floor bed")
+	game.damage(100)
+	for i in range(2):
+		await physics_frame
+	game.respawn()
+	check(game.player.position.distance_to(game.Buildings.origin(bed))<1.2,"Bound bed provides a clear physical respawn")
+	check(Save.validate(game.capture())=="","Walked stair and bound-bed world remains a valid save")
 
 func browser_fixture(game) -> void:
 	# Import a real version-one save through the browser file chooser, not a game command bridge.
@@ -390,7 +477,7 @@ func construction_scene_tests(game) -> void:
 	for i in range(2):
 		await physics_frame
 	var home: Dictionary = game.settlement.place(game.settlement.make_piece("sleeping_bag",door.cell,float(door.y),1,0),game.bag)
-	check(not home.is_empty() and game.settlement.bind_bag(home.id),"Production world binds a supported upper-floor bag")
+	check(not home.is_empty() and game.settlement.bind_spawn(home.id),"Production world binds a supported upper-floor bag")
 	game.damage(100)
 	for i in range(2):
 		await physics_frame
@@ -406,6 +493,7 @@ func run_tests() -> void:
 	domain_tests()
 	construction_tests()
 	base_progression_tests()
+	construction_extension_tests()
 	save_tests()
 	var game = Game.new()
 	root.add_child(game)
@@ -459,6 +547,7 @@ func run_tests() -> void:
 	check(Save.validate(game.capture())=="","Live world serializes validly")
 	check(game.save_count>0,"Real world saves to disk")
 	await construction_scene_tests(game)
+	await stairs_scene_test(game)
 	game.queue_free()
 	await process_frame
 	finished = true

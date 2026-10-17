@@ -1,4 +1,5 @@
 extends Node3D
+const BuildInfo = preload("res://scripts/build_info.gd")
 const items = preload("res://scripts/core/items.gd")
 const Inventory = preload("res://scripts/core/inventory.gd")
 const Crafting = preload("res://scripts/core/crafting.gd")
@@ -173,7 +174,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"workbench_tier":workbench_tier(),"attack_ready":player.cooldown<=0,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":player.target_info,"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"source_commit":BuildInfo.SOURCE,"workbench_tier":workbench_tier(),"attack_ready":player.cooldown<=0,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":player.target_info,"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -279,9 +280,9 @@ func interact() -> void:
 			var piece: Dictionary = settlement.find(id)
 			if piece.is_empty():
 				return
-			if piece.kind=="sleeping_bag":
-				settlement.bind_bag(id)
-				say("Sleeping bag bound. Future respawns return here while it stands.")
+			if piece.kind in ["sleeping_bag","bed"]:
+				settlement.bind_spawn(id)
+				say("Respawn bound. Future respawns return here while it stands.")
 				save_world(false)
 			elif piece.kind=="workbench":
 				menu_open = true
@@ -416,7 +417,7 @@ func recover_corpse(id: String) -> void:
 
 func capture() -> Dictionary:
 	var p: Vector3 = player.position
-	return {"version":3,"maintenance":{"grace":settlement.upkeep_grace,"clock":settlement.upkeep_clock},"structures":settlement.pieces.duplicate(true),"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
+	return {"version":SaveStore.CURRENT_VERSION,"maintenance":{"grace":settlement.upkeep_grace,"clock":settlement.upkeep_clock},"structures":settlement.pieces.duplicate(true),"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
 
 func save_world(notify: bool = true) -> void:
 	if not ready_to_play:
@@ -560,7 +561,7 @@ func respawn_position() -> Vector3:
 		var capsule := CapsuleShape3D.new()
 		capsule.radius = 0.31
 		capsule.height = 1.8
-		for offset in [Vector3(0.95,0.15,0),Vector3(-0.95,0.15,0),Vector3(0,0.15,0.95),Vector3(0,0.15,-0.95)]:
+		for offset in [Vector3(1,0.15,0),Vector3(-1,0.15,0),Vector3(0,0.15,1),Vector3(0,0.15,-1)]:
 			var at: Vector3 = Buildings.origin(home)+offset
 			var query := PhysicsShapeQueryParameters3D.new()
 			query.shape = capsule

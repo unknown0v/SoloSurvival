@@ -32,6 +32,15 @@ static func boxes(p: Dictionary) -> Array:
 		"foundation": return [[Vector3(0,-0.35,0),Vector3(2.98,0.7,2.98)]]
 		"floor": return [[Vector3(0,-0.1,0),Vector3(2.98,0.2,2.98)]]
 		"roof": return [[Vector3(0,0.12,0),Vector3(2.98,0.24,2.98)]]
+		"half_wall": return [[Vector3(0,0.75,-1.5),Vector3(3,1.5,0.16)]]
+		"window_frame": return [[Vector3(-1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(0,2.65,-1.5),Vector3(1.2,0.7,0.16)],[Vector3(0,0.55,-1.5),Vector3(1.2,1.1,0.16)]]
+		"stairs":
+			var steps: Array = []
+			for i in range(12):
+				var h: float = (i+1)*0.25
+				steps.append([Vector3(0,h*0.5,1.375-i*0.25),Vector3(1.1,h,0.25)])
+			return steps
+		"bed": return [[Vector3(0,0.275,0),Vector3(1.2,0.55,2)]]
 		"wall": return [[Vector3(0,1.5,-1.5),Vector3(3,3,0.16)]]
 		"doorframe": return [[Vector3(-1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(0,2.65,-1.5),Vector3(1.2,0.7,0.16)]]
 		"door":
@@ -65,13 +74,19 @@ func visual_piece(p: Dictionary, ghost: Material = null) -> Node3D:
 		visual.position = box[0]
 		visual.material_override = mat
 		body.add_child(visual)
-		if ghost==null:
+		if ghost==null and p.kind!="stairs":
 			var collider := CollisionShape3D.new()
 			var shape := BoxShape3D.new()
 			shape.size = box[1]
 			collider.shape = shape
 			collider.position = box[0]
 			body.add_child(collider)
+	if ghost==null and p.kind=="stairs":
+		var collider := CollisionShape3D.new()
+		var ramp := ConvexPolygonShape3D.new()
+		ramp.points = PackedVector3Array([Vector3(-0.55,0,1.5),Vector3(0.55,0,1.5),Vector3(-0.55,0,-1.5),Vector3(0.55,0,-1.5),Vector3(-0.55,3,-1.5),Vector3(0.55,3,-1.5)])
+		collider.shape = ramp
+		body.add_child(collider)
 	if ghost==null and p.kind in ["campfire","furnace"] and p.active:
 		var flame := MeshInstance3D.new()
 		var flame_mesh := SphereMesh.new()
@@ -146,7 +161,11 @@ func update_candidate() -> void:
 		if build_kind!="foundation":
 			cell = target.cell.duplicate()
 			level = int(target.level)
-			if build_kind in ["floor","roof"] and target.kind in ["wall","doorframe"]:
+			if build_kind in ["floor","roof"] and target.kind in Settlement.BEARING_WALLS:
+				level += 1
+			elif build_kind=="floor" and target.kind=="stairs":
+				var step: Vector2i = Settlement.edge_step(int(target.edge))
+				cell = [int(target.cell[0])+step.x,int(target.cell[1])+step.y]
 				level += 1
 	# Preserve the selected socket's base; otherwise prefer an exact cell over a neighbour.
 	if not hit.collider.has_meta("structure") or build_kind=="foundation":
@@ -165,7 +184,7 @@ func check_placement(p: Dictionary) -> String:
 	var location: Vector3 = origin(p)
 	if game.player.global_position.distance_to(location)>6.5:
 		return "Socket is out of reach."
-	if absi(int(p.cell[0]))>100 or absi(int(p.cell[1]))>100 or int(p.level)>4 or float(p.y)<0 or float(p.y)>120:
+	if absi(int(p.cell[0]))>100 or absi(int(p.cell[1]))>100 or int(p.level)>Settlement.MAX_LEVEL or float(p.y)<0 or float(p.y)>120:
 		return "Outside the buildable island."
 	if p.kind=="foundation":
 		for dx in [-1.4,0,1.4]:
@@ -205,7 +224,7 @@ func clearance_blocked(p: Dictionary, except_id: String = "") -> bool:
 				var same: bool = Settlement.same_cell(p,other)
 				var joint: bool = same and (
 					(p.kind=="door" and other.kind=="doorframe" and p.edge==other.edge and p.level==other.level)
-					or (p.kind in ["wall","doorframe"] and other.kind in ["wall","doorframe"] and p.edge!=other.edge and p.level==other.level)
+					or (p.kind in Settlement.WALLS and other.kind in Settlement.WALLS and p.edge!=other.edge and p.level==other.level)
 					or (p.kind in ["floor","roof"] and other.kind in ["wall","doorframe"] and p.level==other.level+1)
 					or (p.kind in ["wall","doorframe"] and other.kind in ["floor","roof"] and other.level==p.level+1))
 				if not joint:

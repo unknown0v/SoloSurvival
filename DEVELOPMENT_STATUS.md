@@ -45,3 +45,9 @@ All development/build execution is remote. Free public standard Linux runners, P
 ## Continuation
 
 Inspect current branch head and CI before changing anything. Fix active-increment regressions first; preserve the verified M2 release above. Update this file and PR with exact next verified source/run. Then continue Phase A extensions and survival/progression without asking which ordinary feature is next. See AGENTS.md and RELEASE_CHECKLIST.md. No background execution is configured after a session ends.
+
+## Base-progression checkpoint verified
+
+Source `46232e96790ab03daf41d79b22b53e32bf494b33`, [run 39046908209](https://github.com/unknown0v/SoloSurvival/actions/runs/39046908209), passed 126 headless assertions, five JavaScript confirmation tests, both exports and complete exported-browser cooking/smelting/upkeep-storage/bag/workbench-tool integration. The public Pages repeat passed core gameplay and seven-piece construction, repair and storage reload; it intentionally did not repeat processing/progression. [Preserved verified release](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-46232e96790a).
+
+Active unverified follow-up: half walls, window frames, walkable stairs with adjacent upper landings and open stairwells, beds sharing the bound-spawn owner, safe spawn offsets, schema-4 migration and compiled source identity. The next cloud suite tests actual controller stair ascent and browser placement/ascent/reload. No completion or successful graphical test is claimed before that run finishes.

@@ -1,15 +1,18 @@
 extends RefCounted
 const Inventory = preload("res://scripts/core/inventory.gd")
-const KINDS = ["foundation","wall","floor","roof","doorframe","door","storage","campfire","furnace","cupboard","sleeping_bag","workbench"]
+const KINDS = ["foundation","wall","floor","roof","doorframe","door","storage","campfire","furnace","cupboard","sleeping_bag","workbench","half_wall","window_frame","stairs","bed"]
+const WALLS = ["wall","doorframe","half_wall","window_frame"]
+const BEARING_WALLS = ["wall","doorframe","window_frame"]
 const COSTS = {
 	"foundation":{"wood":30},"wall":{"wood":25},"floor":{"wood":25},"roof":{"wood":25},
 	"doorframe":{"wood":20},"door":{"wood":40},"storage":{"wood":60},
 	"campfire":{"wood":40,"stone":30},"furnace":{"wood":60,"stone":200},
-	"cupboard":{"wood":250,"stone":50},"sleeping_bag":{"wood":50,"cloth":30},"workbench":{"wood":300,"metal":100}
+	"cupboard":{"wood":250,"stone":50},"sleeping_bag":{"wood":50,"cloth":30},"workbench":{"wood":300,"metal":100},"half_wall":{"wood":15},"window_frame":{"wood":25},"stairs":{"wood":50},"bed":{"wood":200,"cloth":50,"metal":30}
 }
 const HEALTH = [80.0,250.0,600.0,1000.0]
 const TIERS = ["Twig","Wood","Stone","Metal"]
 const MAX_PIECES: int = 256
+const MAX_LEVEL: int = 4
 var pieces: Array = []
 var serial: int = 0
 var upkeep_clock: float = 0
@@ -22,7 +25,7 @@ static func station(kind: String) -> bool:
 	return kind in ["storage","campfire","furnace","cupboard"]
 
 static func deployable(kind: String) -> bool:
-	return station(kind) or kind in ["sleeping_bag","workbench"]
+	return station(kind) or kind in ["sleeping_bag","bed","workbench"]
 
 static func same_cell(a: Dictionary, b: Dictionary) -> bool:
 	return int(a.cell[0])==int(b.cell[0]) and int(a.cell[1])==int(b.cell[1]) and absf(float(a.y)-float(b.y))<0.05
@@ -45,13 +48,13 @@ func at_socket(candidate: Dictionary) -> Dictionary:
 			continue
 		if horizontal(p.kind) and horizontal(candidate.kind):
 			return p
-		if p.kind in ["wall","doorframe"] and candidate.kind in ["wall","doorframe"] and p.edge==candidate.edge:
+		if p.kind in WALLS and candidate.kind in WALLS and p.edge==candidate.edge:
 			return p
 		if p.kind==candidate.kind and p.edge==candidate.edge:
 			return p
 		# Opposite edges in adjoining cells describe the same physical wall.
 	for p in pieces:
-		if p.kind not in ["wall","doorframe"] or candidate.kind not in ["wall","doorframe"]:
+		if p.kind not in WALLS or candidate.kind not in WALLS:
 			continue
 		var step: Vector2i = edge_step(int(candidate.edge))
 		if int(p.cell[0])==int(candidate.cell[0])+step.x and int(p.cell[1])==int(candidate.cell[1])+step.y and p.edge==(int(candidate.edge)+2)%4 and p.level==candidate.level and absf(float(p.y)-float(candidate.y))<0.05:
@@ -80,11 +83,15 @@ func supports(records: Array) -> Dictionary:
 				if value<=0 or p.id==source.id:
 					continue
 				if same_cell(p,source):
-					if (p.kind in ["wall","doorframe"] or deployable(p.kind)) and source.kind in ["foundation","floor"] and source.level==p.level:
+					if (p.kind in WALLS or p.kind=="stairs" or deployable(p.kind)) and source.kind in ["foundation","floor"] and source.level==p.level:
 						best = maxf(best,value-0.08)
 					elif p.kind=="door" and source.kind=="doorframe" and source.level==p.level and source.edge==p.edge:
 						best = maxf(best,value-0.04)
-					elif p.kind in ["floor","roof"] and source.kind in ["wall","doorframe"] and source.level+1==p.level:
+					elif p.kind in ["floor","roof"] and source.kind in BEARING_WALLS and source.level+1==p.level:
+						best = maxf(best,value-0.08)
+				elif p.kind=="floor" and source.kind=="stairs" and source.level+1==p.level and absf(float(p.y)-float(source.y))<0.05:
+					var step: Vector2i = edge_step(int(source.edge))
+					if int(p.cell[0])==int(source.cell[0])+step.x and int(p.cell[1])==int(source.cell[1])+step.y:
 						best = maxf(best,value-0.08)
 				elif p.kind in ["floor","roof"] and source.kind=="floor" and source.level==p.level and absf(float(p.y)-float(source.y))<0.05:
 					var distance: int = absi(int(p.cell[0])-int(source.cell[0]))+absi(int(p.cell[1])-int(source.cell[1]))
@@ -98,10 +105,15 @@ func supports(records: Array) -> Dictionary:
 	return strength
 
 func reason(candidate: Dictionary) -> String:
+	if candidate.kind not in KINDS or int(candidate.level)<0 or int(candidate.level)>MAX_LEVEL:
+		return "Unknown piece or building height limit."
 	if pieces.size()>=MAX_PIECES:
 		return "Structure limit reached (256)."
 	if not at_socket(candidate).is_empty():
 		return "That socket is occupied."
+	for p in pieces:
+		if same_cell(p,candidate) and ((candidate.kind in ["floor","roof"] and p.kind=="stairs" and candidate.level==p.level+1) or (candidate.kind=="stairs" and p.kind in ["floor","roof"] and p.level==candidate.level+1)):
+			return "Leave an open stairwell above stairs."
 	var test: Dictionary = candidate.duplicate(true)
 	test.id = "@preview"
 	var all: Array = pieces.duplicate()
@@ -227,7 +239,7 @@ static func valid(data: Variant) -> bool:
 		if not p.get("respawn",false) is bool:
 			return false
 		if p.get("respawn",false):
-			if p.get("kind")!="sleeping_bag":
+			if p.get("kind") not in ["sleeping_bag","bed"]:
 				return false
 			respawns += 1
 			if respawns>1:
@@ -237,7 +249,7 @@ static func valid(data: Variant) -> bool:
 		for v in p.cell:
 			if not numeric(v,-100,100) or float(v)!=floorf(float(v)):
 				return false
-		if not numeric(p.get("y"),0,120) or not numeric(p.get("level"),0,4) or float(p.level)!=floorf(float(p.level)):
+		if not numeric(p.get("y"),0,120) or not numeric(p.get("level"),0,MAX_LEVEL) or float(p.level)!=floorf(float(p.level)):
 			return false
 		if not numeric(p.get("edge"),0,3) or float(p.edge)!=floorf(float(p.edge)) or not numeric(p.get("tier"),0,3) or float(p.tier)!=floorf(float(p.tier)):
 			return false
@@ -337,9 +349,9 @@ func tick_upkeep(dt: float) -> void:
 	if changed_any:
 		notify_changed()
 
-func bind_bag(id: String) -> bool:
+func bind_spawn(id: String) -> bool:
 	var target: Dictionary = find(id)
-	if target.is_empty() or target.kind!="sleeping_bag":
+	if target.is_empty() or target.kind not in ["sleeping_bag","bed"]:
 		return false
 	for p in pieces:
 		p.respawn = p.id==id
@@ -348,7 +360,7 @@ func bind_bag(id: String) -> bool:
 
 func respawn_piece() -> Dictionary:
 	for p in pieces:
-		if p.kind=="sleeping_bag" and p.get("respawn",false):
+		if p.kind in ["sleeping_bag","bed"] and p.get("respawn",false):
 			return p
 	return {}
 

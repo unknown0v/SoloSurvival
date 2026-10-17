@@ -19,6 +19,7 @@ var target_info: Dictionary = {}
 
 func setup(owner_game, at: Vector3, yaw: float, look: float) -> void:
 	game = owner_game
+	floor_max_angle = deg_to_rad(48)
 	collision_layer = 2
 	collision_mask = 1
 	position = at
@@ -157,7 +158,7 @@ func interaction_prompt() -> String:
 				return ""
 			var integrity: float = float(game.buildings.integrity.get(id,0))
 			var grade: String = "" if game.Settlement.deployable(piece.kind) else game.Settlement.TIERS[int(piece.tier)]
-			return "%s %s · %d/%d HP · %d%% SUPPORT\n%s" % [grade,piece.kind.to_upper().replace("_"," "),int(piece.hp),int(game.Settlement.max_health(piece)),roundi(integrity*100),"E OPEN / CLOSE" if piece.kind=="door" else "E BIND RESPAWN" if piece.kind=="sleeping_bag" else "E USE WORKBENCH" if piece.kind=="workbench" else "E OPEN CONTAINER" if game.Settlement.station(piece.kind) else "HAMMER: CLICK REPAIR · U UPGRADE · X DISMANTLE"]
+			return "%s %s · %d/%d HP · %d%% SUPPORT\n%s" % [grade,piece.kind.to_upper().replace("_"," "),int(piece.hp),int(game.Settlement.max_health(piece)),roundi(integrity*100),"E OPEN / CLOSE" if piece.kind=="door" else "E BIND RESPAWN" if piece.kind in ["sleeping_bag","bed"] else "E USE WORKBENCH" if piece.kind=="workbench" else "E OPEN CONTAINER" if game.Settlement.station(piece.kind) else "HAMMER: CLICK REPAIR · U UPGRADE · X DISMANTLE"]
 		"resource":
 			var resource: Dictionary = game.world.nodes.get(id,{})
 			if not resource.is_empty():

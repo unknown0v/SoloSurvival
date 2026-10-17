@@ -24,3 +24,6 @@ Dependencies: construction → processing/benches → weapons/armor → wildlife
 M2 validation: source `b30937aefd4b0702c036603df3eb4e8af5471325`, [run 39044434999](https://github.com/unknown0v/SoloSurvival/actions/runs/39044434999), 95 headless assertions, both exports, exported/public browser construction and processing save/reload. Regional tree batching and fuller browser shelter checks are the active follow-up; this does not complete Phase A.
 
 Rendering follow-up verified: source `be72860fe4ef25f6171bd553bfa9356cd394a677`, run 39045492002; 100 headless assertions, five confirmation cases and full exported/public browser building/processing reload. Active: cupboard upkeep, bound sleeping bag, basic workbench and metal tool; schema-3 migration and browser tests pending.
+
+- [x] Basic cupboard upkeep/decay, bound sleeping bags and workbench-gated metal tool: `46232e96790ab03daf41d79b22b53e32bf494b33`, run 39046908209; scope above and in status.
+- [ ] Active construction extension: half walls, window frames, stairs/upper landings and beds, with schema-4 migration/validation.
