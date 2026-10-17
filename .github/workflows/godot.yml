@@ -72,3 +72,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tools/publish_web.py
+
+      - name: Verify the actual hosted game after Pages deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
+        shell: bash
+        run: |
+          python3 tools/check_hosted.py
+          GAME_URL="$(cat build/hosted-url.txt)" NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs

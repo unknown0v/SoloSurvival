@@ -37,6 +37,7 @@ def main():
             raise SystemExit("Existing gh-pages ownership does not match; left untouched.")
         parents = ["-p",run("git","rev-parse","FETCH_HEAD",cwd=root).stdout.strip()]
     (root / marker_name).write_text(json.dumps(marker)+"\n",encoding="utf-8")
+    (root / "solosurvival-build.json").write_text(json.dumps(marker)+"\n",encoding="utf-8")
     (root / ".nojekyll").touch()
     run("git","add","--all",cwd=root)
     tree = run("git","write-tree",cwd=root).stdout.strip()

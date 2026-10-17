@@ -6,6 +6,8 @@ Development branch: [codex/godot-first-playable](https://github.com/unknown0v/So
 
 ## Play
 
+**Browser:** https://unknown0v.github.io/SoloSurvival/ — served from the validated generated branch. Click Embark or press Enter. No download or engine installation is needed.
+
 Validated Web and unsigned Windows ZIPs are published to [GitHub Releases](https://github.com/unknown0v/SoloSurvival/releases) after the cloud pipeline passes. If no preview release exists, no build has passed all checks yet.
 
 See [hosting and account setup](Documentation/HOSTING.md) for the prepared itch.io deployment workflow.

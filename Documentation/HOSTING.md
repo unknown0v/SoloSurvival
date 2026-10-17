@@ -12,7 +12,7 @@ Unavoidable account setup:
 
 The workflow uses official butler 15.24.0 from itch.io's documented broth service. This deployment workflow is prepared but has not been run or account-authorized. It does not claim a hosted URL exists. It checks the ZIP extraction paths and itch.io limits: 1,000 files, 240-character paths, under 500 MB total unpacked and under 200 MB per file.
 
-The validated cloud pipeline also prepares a dedicated generated gh-pages branch with an ownership marker. It attempts free GitHub Pages activation using the workflow token. If GitHub denies that setting, the repository owner must enable Settings > Pages > Deploy from a branch > gh-pages / (root). Existing foreign branches and Pages sources are preserved. A live URL is reported only after the host responds; pipeline preparation alone does not establish that hosting is enabled. There is no need to buy hosting, enable Codespaces or install a local server to develop.
+The validated cloud pipeline also prepares a dedicated generated gh-pages branch with an ownership marker. It attempts free GitHub Pages activation using the workflow token. The owner has now enabled this repository's Pages source; the public game URL is https://unknown0v.github.io/SoloSurvival/ . If GitHub denies that setting, the repository owner must enable Settings > Pages > Deploy from a branch > gh-pages / (root). Existing foreign branches and Pages sources are preserved. A live URL is reported only after the host responds; pipeline preparation alone does not establish that hosting is enabled. There is no need to buy hosting, enable Codespaces or install a local server to develop.
 
 https://itch.io/docs/creators/html5  
 https://itch.io/docs/butler/installing.html  

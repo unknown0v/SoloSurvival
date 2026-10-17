@@ -13,7 +13,7 @@ const assert = require('node:assert/strict');
     if (text.includes('SOLOSURVIVAL')) console.log(text);
   });
   try {
-    await page.goto('http://127.0.0.1:8060/index.html',{waitUntil:'domcontentloaded'});
+    await page.goto(process.env.GAME_URL || 'http://127.0.0.1:8060/index.html',{waitUntil:'domcontentloaded'});
     await page.waitForFunction(() => window.__soloSurvivalState?.ready,null,{timeout:120000});
     assert.ok((await page.evaluate(() => window.__soloSurvivalState.nodes))>100);
     const bounds = await page.locator('#canvas').boundingBox();
