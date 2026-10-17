@@ -15,7 +15,7 @@ var bob: float = 0
 var current_item: String = ""
 var cooldown: float = 0
 var swimming: bool = false
-var hit: Dictionary = {}
+var target_info: Dictionary = {}
 
 func setup(owner_game, at: Vector3, yaw: float, look: float) -> void:
 	game = owner_game
@@ -129,26 +129,41 @@ func _physics_process(dt: float) -> void:
 	cooldown = maxf(0,cooldown-dt)
 	var from: Vector3 = camera.global_position
 	var query := PhysicsRayQueryParameters3D.create(from,from-camera.global_basis.z*4.5,1)
-	hit = get_world_3d().direct_space_state.intersect_ray(query)
+	update_target(get_world_3d().direct_space_state.intersect_ray(query))
 	if not blocked and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and cooldown<=0:
 		cooldown = 0.65
 		game.primary_action()
 	if not game.build_mode:
 		game.prompt = "" if blocked else interaction_prompt()
 
+# Resolve collider metadata once, while the physics result owns a live collider.
+# Consumers retain stable domain IDs across mesh/collider rebuilds.
+func update_target(result: Dictionary) -> void:
+	target_info = {}
+	var collider: Variant = result.get("collider")
+	if not is_instance_valid(collider):
+		return
+	for kind in ["resource","structure","corpse"]:
+		if collider.has_meta(kind):
+			target_info = {"kind":kind,"id":str(collider.get_meta(kind))}
+			return
+
 func interaction_prompt() -> String:
-	if not hit.is_empty():
-		var body: Object = hit.collider
-		if body.has_meta("structure"):
-			var p: Dictionary = game.settlement.find(str(body.get_meta("structure")))
-			if p.is_empty():
+	var id: String = str(target_info.get("id",""))
+	match target_info.get("kind",""):
+		"structure":
+			var piece: Dictionary = game.settlement.find(id)
+			if piece.is_empty():
 				return ""
-			var integrity: float = float(game.buildings.integrity.get(p.id,0))
-			return "%s %s · %d/%d HP · %d%% SUPPORT\n%s" % [game.Settlement.TIERS[int(p.tier)],p.kind.to_upper(),int(p.hp),int(game.Settlement.max_health(p)),roundi(integrity*100),"E OPEN / CLOSE" if p.kind=="door" else "E BIND RESPAWN" if p.kind=="sleeping_bag" else "E USE WORKBENCH" if p.kind=="workbench" else "E OPEN CONTAINER" if game.Settlement.station(p.kind) else "HAMMER: CLICK REPAIR · U UPGRADE · X DISMANTLE"]
-		if body.has_meta("resource"):
-			var kind: String = game.world.nodes[str(body.get_meta("resource"))].kind
-			return "E  HARVEST HEMP" if kind=="cloth" else "E  PICK BERRIES" if kind=="berries" else "STRIKE TO GATHER  /  "+("WOOD" if kind=="tree" else kind.to_upper())
-		if body.has_meta("corpse"):
+			var integrity: float = float(game.buildings.integrity.get(id,0))
+			var grade: String = "" if game.Settlement.deployable(piece.kind) else game.Settlement.TIERS[int(piece.tier)]
+			return "%s %s · %d/%d HP · %d%% SUPPORT\n%s" % [grade,piece.kind.to_upper().replace("_"," "),int(piece.hp),int(game.Settlement.max_health(piece)),roundi(integrity*100),"E OPEN / CLOSE" if piece.kind=="door" else "E BIND RESPAWN" if piece.kind=="sleeping_bag" else "E USE WORKBENCH" if piece.kind=="workbench" else "E OPEN CONTAINER" if game.Settlement.station(piece.kind) else "HAMMER: CLICK REPAIR · U UPGRADE · X DISMANTLE"]
+		"resource":
+			var resource: Dictionary = game.world.nodes.get(id,{})
+			if not resource.is_empty():
+				var kind: String = resource.kind
+				return "E  HARVEST HEMP" if kind=="cloth" else "E  PICK BERRIES" if kind=="berries" else "STRIKE TO GATHER  /  "+("WOOD" if kind=="tree" else kind.to_upper())
+		"corpse":
 			return "E  RECOVER YOUR BELONGINGS"
 	if game.world.math.freshwater(position.x,position.z) and position.y<2:
 		return "E  DRINK FRESH WATER"

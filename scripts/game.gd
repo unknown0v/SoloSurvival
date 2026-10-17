@@ -173,7 +173,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"workbench_tier":workbench_tier(),"attack_ready":player.cooldown<=0,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"workbench_tier":workbench_tier(),"attack_ready":player.cooldown<=0,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":player.target_info,"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -259,47 +259,47 @@ func primary_action() -> void:
 	if int(item.condition)<=0:
 		say("Your tool is broken. Craft another or recover a rock after respawning.")
 		return
-	if not player.hit.is_empty() and player.hit.collider.has_meta("structure"):
-		if settlement.strike(str(player.hit.collider.get_meta("structure")),12):
+	if player.target_info.get("kind")=="structure":
+		if settlement.strike(str(player.target_info.id),12):
 			wear_tool()
 		else:
 			say("Empty all affected containers before destruction.")
 		return
 	player.swing = 1
 	sound.hit(false)
-	if not player.hit.is_empty() and player.hit.collider.has_meta("resource"):
-		world.harvest(str(player.hit.collider.get_meta("resource")),id)
+	if player.target_info.get("kind")=="resource" and world.nodes.has(str(player.target_info.id)):
+		world.harvest(str(player.target_info.id),id)
 
 func interact() -> void:
 	if float(stats.health)<=0:
 		return
-	if not player.hit.is_empty():
-		var body: Object = player.hit.collider
-		if body.has_meta("structure"):
-			var id: String = str(body.get_meta("structure"))
-			var p: Dictionary = settlement.find(id)
-			if p.kind=="sleeping_bag":
+	var id: String = str(player.target_info.get("id",""))
+	match player.target_info.get("kind",""):
+		"structure":
+			var piece: Dictionary = settlement.find(id)
+			if piece.is_empty():
+				return
+			if piece.kind=="sleeping_bag":
 				settlement.bind_bag(id)
 				say("Sleeping bag bound. Future respawns return here while it stands.")
 				save_world(false)
-			elif p.kind=="workbench":
+			elif piece.kind=="workbench":
 				menu_open = true
 				station_id = ""
 				build_mode = false
 				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 				hud.tabs.current_tab = 0
-			elif p.kind=="door":
+			elif piece.kind=="door":
 				buildings.toggle_door(id)
-			elif Settlement.station(p.kind):
+			elif Settlement.station(piece.kind):
 				open_station(id)
 			return
-		if body.has_meta("resource"):
-			var id: String = str(body.get_meta("resource"))
-			if world.nodes[id].kind in ["cloth","berries"]:
+		"resource":
+			if world.nodes.has(id) and world.nodes[id].kind in ["cloth","berries"]:
 				world.harvest(id,"hand")
 				return
-		if body.has_meta("corpse"):
-			recover_corpse(str(body.get_meta("corpse")))
+		"corpse":
+			recover_corpse(id)
 			return
 	if world.math.freshwater(player.position.x,player.position.z) and player.position.y<2:
 		stats.thirst = minf(100,float(stats.thirst)+35)
@@ -390,6 +390,7 @@ func respawn() -> void:
 	if bag.count_item("torch")==0:
 		bag.add("torch",1)
 	player.position = respawn_position()
+	player.update_target({})
 	player.velocity = Vector3.ZERO
 	start_playing()
 	say("Your belongings remain where you fell.")
@@ -492,9 +493,9 @@ func hammer_action(upgrading: bool, repairing: bool = false) -> void:
 	if active_id()!="hammer" or int(bag.slots[selected].condition)<=0:
 		say("Select a working building hammer.")
 		return
-	if player.hit.is_empty() or not player.hit.collider.has_meta("structure"):
+	if player.target_info.get("kind")!="structure":
 		return
-	var id: String = str(player.hit.collider.get_meta("structure"))
+	var id: String = str(player.target_info.id)
 	var ok: bool = false
 	if upgrading:
 		ok = settlement.upgrade(id,bag)

@@ -417,6 +417,13 @@ func run_tests() -> void:
 	game.world.set_resource_visible("500",true)
 	check(game.world.forest.resource_visible("500"),"Visibility owner records respawn request")
 	check(game.world.forest.batches.size()<game.world.nodes.size(),"Forest is bounded into shared draw batches")
+	var temporary := StaticBody3D.new()
+	temporary.set_meta("structure","retained-id")
+	game.player.update_target({"collider":temporary})
+	temporary.free()
+	check(game.player.target_info=={"kind":"structure","id":"retained-id"},"Physics boundary retains stable IDs after a collider is freed")
+	game.primary_action()
+	check(game.stats.health==100,"Missing stable targets are handled without dereferencing freed nodes")
 	check(game.world.nodes.size()>100,"Real world generates resource nodes")
 	game.playing = true
 	for i in range(90):
@@ -424,7 +431,7 @@ func run_tests() -> void:
 	check(game.player.position.y>game.world.math.height(game.player.position.x,game.player.position.z)-0.8,"Player collides with island terrain")
 	check(game.player.position.y<game.world.math.height(game.player.position.x,game.player.position.z)+2,"Player settles on ground")
 	var before: int = game.bag.count_item("wood")
-	game.player.hit = {"collider":game.world.nodes["500"].body}
+	game.player.update_target({"collider":game.world.nodes["500"].body})
 	game.primary_action()
 	check(game.bag.count_item("wood")>before,"Production action harvests wood")
 	check(game.bag.slots[0].condition==299,"Harvest consumes tool durability")

@@ -2,8 +2,10 @@ name: Godot validate and export
 on:
   push:
     branches: [main, codex/godot-first-playable]
+    paths-ignore: ["**/*.md"]
   pull_request:
     branches: [main]
+    paths-ignore: ["**/*.md"]
   workflow_dispatch:
 
 permissions:
