@@ -58,12 +58,18 @@ static func wrap(data: Dictionary) -> String:
 	return JSON.stringify({"format":1, "sha256":payload.sha256_text(), "payload":payload})
 
 static func unwrap(text: String) -> Dictionary:
-	var envelope: Variant = JSON.parse_string(text)
+	var parser := JSON.new()
+	if parser.parse(text)!=OK:
+		return {"error":"Malformed save JSON."}
+	var envelope: Variant = parser.data
 	if not envelope is Dictionary or envelope.get("format") != 1 or not envelope.get("payload") is String:
 		return {"error":"Unrecognized save format."}
 	if envelope.payload.sha256_text() != envelope.get("sha256"):
 		return {"error":"Save integrity check failed."}
-	var data: Variant = JSON.parse_string(envelope.payload)
+	var inner := JSON.new()
+	if inner.parse(envelope.payload)!=OK:
+		return {"error":"Malformed save payload."}
+	var data: Variant = inner.data
 	var error: String = validate(data)
 	if error != "":
 		return {"error":error, "unsupported":data is Dictionary and (data.get("version") != 1 or data.get("seed") != 197403)}
