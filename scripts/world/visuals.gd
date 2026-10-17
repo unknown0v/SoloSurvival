@@ -66,22 +66,6 @@ func cylinder(parent: Node3D, at: Vector3, radius: float, height: float, mat: Ma
 	parent.add_child(visual)
 	return visual
 
-func tree(parent: Node3D, variant: int) -> void:
-	var bark: Material = material("bark",Color("#66584a"))
-	var leaves: Material = material("leaves"+str(variant%3),Color("#4e653f").lightened((variant%3)*0.04))
-	var trunk := cylinder(parent,Vector3(0,3.2,0),0.3,6.4,bark,0.08)
-	trunk.visibility_range_end = 240
-	for i in range(4):
-		var angle: float = i*2.399+variant
-		var branch := cylinder(parent,Vector3(sin(angle)*0.55,4+i*0.4,cos(angle)*0.55),0.08,1.9,bark,0.02)
-		branch.visibility_range_end = 120
-		branch.rotation = Vector3(sin(angle)*0.7,0,cos(angle)*0.7)
-		var crown := rock(parent,Vector3(sin(angle)*1.3,5.2+i*0.5,cos(angle)*1.3),Vector3(1.9,1.7,1.9),leaves,i%3)
-		crown.visibility_range_end = 150
-	var distant := rock(parent,Vector3(0,6,0),Vector3(2.7,2.5,2.7),leaves,variant%3)
-	distant.visibility_range_begin = 145
-	distant.visibility_range_end = 400
-
 func crate(parent: Node3D) -> void:
 	var wood: Material = material("wood",Color("#92724d"))
 	var iron: Material = material("iron",Color("#424c4e"),0.6)

@@ -9,7 +9,7 @@
     if(database) database.close();
     complete(request.generation,ok,message);
   };
-  const job={cancel(){stopped=true;clearTimeout(timer);if(database)database.close();}};
+  const job={cancel(){if(stopped)return;stopped=true;clearTimeout(timer);if(database)database.close();}};
   window.__soloSaveJob=job;
   const started=performance.now();
   const open=indexedDB.open('/userfs');

@@ -1,6 +1,8 @@
 extends Node3D
 const WorldMath = preload("res://scripts/core/world_math.gd")
+const Forest = preload("res://scripts/world/forest.gd")
 const Visuals = preload("res://scripts/world/visuals.gd")
+var forest
 var math = WorldMath.new()
 var art = Visuals.new()
 var game
@@ -10,6 +12,8 @@ var rng := RandomNumberGenerator.new()
 
 func build(owner_game) -> void:
 	game = owner_game
+	forest = Forest.new()
+	add_child(forest)
 	rng.seed = WorldMath.SEED
 	var terrain_mat := ShaderMaterial.new()
 	terrain_mat.shader = preload("res://shaders/terrain.gdshader")
@@ -42,6 +46,7 @@ func build(owner_game) -> void:
 	var early: Array = ["stone","cloth","berries","tree","stone","ore"]
 	for i in range(early.size()):
 		resource(501+i,early[i],-143+(i%3)*6,-159-(i/3)*9)
+	forest.setup(self)
 	update_corpse()
 	await get_tree().physics_frame
 
@@ -88,7 +93,6 @@ func resource(id: int, kind: String, x: float, z: float) -> void:
 	var shape := CollisionShape3D.new()
 	var bounds := CylinderShape3D.new()
 	if kind=="tree":
-		art.tree(body,id%5)
 		bounds.radius = 0.42
 		bounds.height = 6.4
 		shape.position.y = 3.2
@@ -119,6 +123,8 @@ func max_health(kind: String) -> float:
 
 func set_resource_visible(id: String, shown: bool) -> void:
 	nodes[id].body.visible = shown
+	if forest!=null:
+		forest.show_resource(id,shown)
 	nodes[id].shape.set_deferred("disabled",not shown)
 
 func harvest(id: String, tool: String) -> bool:

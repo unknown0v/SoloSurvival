@@ -125,6 +125,7 @@ func construction_tests() -> void:
 	var restored = Settlement.new()
 	restored.pieces = JSON.parse_string(JSON.stringify(model.pieces))
 	check(Settlement.valid(restored.pieces),"Structure graph and stored items survive JSON roundtrip")
+	check(restored.reason(restored.make_piece("wall",[0,0],10,0,0))=="That socket is occupied.","Loaded numeric cell identities match newly snapped sockets")
 	var bad: Array = restored.pieces.duplicate(true)
 	bad[0].hp = -2
 	check(not Settlement.valid(bad),"Malformed structure health rejected")
@@ -320,6 +321,12 @@ func run_tests() -> void:
 	root.add_child(game)
 	await game.world_ready
 	browser_fixture(game)
+	check(game.world.forest.resource_visible("500"),"Batched starting tree is visible")
+	game.world.set_resource_visible("500",false)
+	check(not game.world.forest.resource_visible("500"),"Harvested tree hides every owned batch instance")
+	game.world.set_resource_visible("500",true)
+	check(game.world.forest.resource_visible("500"),"Resource respawn restores owned batch instances")
+	check(game.world.forest.batches.size()<game.world.nodes.size(),"Forest is bounded into shared draw batches")
 	check(game.world.nodes.size()>100,"Real world generates resource nodes")
 	game.playing = true
 	for i in range(90):

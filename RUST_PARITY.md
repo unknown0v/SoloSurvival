@@ -8,10 +8,10 @@ No Rust binaries, proprietary assets, source or protected data were copied/analy
 | Controls | Mouse look, walking/sprint/crouch/jump/swim | Independent speeds/tuning; no measured Rust camera/movement match |
 | Gathering/crafting | Rock/tools, stacks, six-slot bar, timed reserved recipes | Limited item set, independent yields/costs/timing |
 | Survival | Health, food/water, fall/drowning, death/recovery | Temperature, bleeding, radiation and equipment still future |
-| Construction | M2 source adds 3 m square sockets, tiers/support/repair/damage | Cloud tests pending; no triangle/window/stair/decay/upkeep/armored implementation yet |
-| Processing | M2 source adds storage, berries cooking and ore smelting | Cloud tests pending; simplified fuel batches, no hunting/meat/bench progression yet |
+| Construction | M2 source adds 3 m square sockets, tiers/support/repair/damage | 95-assertion suite and exported/public browser construction passed; no triangle/window/stair/decay/upkeep/armored implementation yet |
+| Processing | M2 source adds storage, berries cooking and ore smelting | Exported/public browser cooking/smelting and reload passed; simplified fuel batches, no hunting/meat/bench progression yet |
 | Combat/PvE | No integrated weapons/AI/monuments | All required before 1.0 |
-| Persistence | Baseline browser save/reload verified | M2 schema migration and building persistence under validation |
+| Persistence | Baseline browser save/reload verified | M2 schema-1 import, building/storage/station reload and durable IndexedDB confirmation browser verified |
 | Native | Windows x64 export produced | Native Windows runtime not verified |
 
 Never replace unmeasured comparisons with claims of Rust parity. Refresh entries after each validated increment.

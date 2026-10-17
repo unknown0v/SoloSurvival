@@ -1,70 +1,25 @@
 # SoloSurvival
 
-A genuine single-player 3D survival game built with Godot 4 and GDScript. One deterministic island, offline gameplay and saves on your device. Independent original code and procedural assets; no proprietary Rust code or content.
+An independent single-player Godot 4.7.2 / GDScript survival game on one persistent 3D island. Compatibility Web renderer and standalone offline Windows export. Original procedural art; an early playable game, not Rust parity or a finished 1.0 release.
 
-Development branch: [codex/godot-first-playable](https://github.com/unknown0v/SoloSurvival/tree/codex/godot-first-playable). This is the first milestone, not a finished Rust recreation.
+**[Play in your browser](https://unknown0v.github.io/SoloSurvival/)** · [Downloads](https://github.com/unknown0v/SoloSurvival/releases) · [Draft PR](https://github.com/unknown0v/SoloSurvival/pull/1)
 
 ## Play
 
-**Browser:** https://unknown0v.github.io/SoloSurvival/ — served from the validated generated branch. Click Embark or press Enter. No download or engine installation is needed.
+Enter starts/resumes. WASD moves; mouse looks; Shift sprints; Ctrl crouches; Space jumps/swims. Left click gathers with a selected rock/tool or uses consumables. E harvests plants, drinks river water, recovers belongings, opens containers and toggles doors. 1–6 selects the hotbar. Tab opens inventory/crafting; Escape pauses; F5 saves.
 
-Validated Web and unsigned Windows ZIPs are published to [GitHub Releases](https://github.com/unknown0v/SoloSurvival/releases) after the cloud pipeline passes. If no preview release exists, no build has passed all checks yet.
+Craft a building plan and hammer in inventory. Press B to build; 1–9 chooses foundation, wall, floor, roof, frame, door, storage, campfire or furnace. R rotates, left click places a green preview. Foundations need dry/flat terrain; upper floors/roofs need walls. Aim at the supporting piece to choose its level. Press B to put the plan away.
 
-See [hosting and account setup](Documentation/HOSTING.md) for the prepared itch.io deployment workflow.
+Select the hammer: left click repairs, U upgrades, X dismantles. Costs are charged to inventory; removing supports collapses unsupported pieces. Empty every affected container first. No demolition refund. Station slots accept drag/drop and bulk transfers; start/stop processing in their panel. Campfires cook two berries with one wood into a ration; furnaces smelt two ore with one wood into metal.
 
-The Web ZIP contains the actual Godot WebAssembly game. It must be served over HTTP(S), such as an itch.io HTML5 project; opening index.html directly from disk does not work. No engine installation is needed to play a hosted Web build. Windows ZIPs run normally after extraction; the native build is unsigned and not independently tested on Windows yet.
+## Persistence
 
-## Controls
+The existing save path remains `user://island-v1.json`. Schema 1 loads unchanged; schema 2 adds structures and station contents/state. Saves include integrity checks, backup recovery and future-version protection. Browser save messages distinguish staged writes from confirmed IndexedDB persistence: wait for “Saved to browser storage” before reloading. Storage can still be unavailable/cleared by the browser; use Download Save Backup. Restore imports a validated JSON file and preserves existing saves.
 
-| Action | Input |
-|---|---|
-| Start / resume | Enter or Embark |
-| Look / move | Mouse / WASD |
-| Sprint / crouch | Shift / Ctrl |
-| Jump / swim upward | Space |
-| Gather / use selected consumable | Left mouse |
-| Harvest hemp or berries / drink river water / recover belongings | E |
-| Hotbar | 1–6 / mouse wheel |
-| Inventory and crafting | Tab |
-| Pause | Esc |
-| Save | F5 |
-| Move items / half stack / split | Drag / Shift-drag / right click |
+## Cloud development
 
-Begin with a rock and torch. Strike nearby trees and pale stone nodes, harvest hemp, then craft a hatchet or pickaxe. Consume berries and water from your hotbar or inventory. Crafted tools improve gathering yields. Keep food, water and health above zero. A death container retains belongings at your last position.
+No Godot/tool installation on the owner's laptop. Public standard GitHub Actions runners install checksum-pinned official engine/templates, compile/import, run regressions, export Web/Windows and drive Chromium with software WebGL. Only validated branch builds publish immutable releases and a generated Pages branch. Optional itch.io deployment uses secrets and remains unconfigured. No paid infrastructure is provisioned.
 
-## Saves
+[Project instructions](AGENTS.md) · [Roadmap](ROADMAP.md) · [Development status](DEVELOPMENT_STATUS.md) · [Parity report](RUST_PARITY.md) · [Asset licenses](ASSET_LICENSES.md) · [Release gates](RELEASE_CHECKLIST.md) · [Acceptance record](Documentation/ACCEPTANCE.md)
 
-Autosave runs every 30 simulated seconds; pause, F5 and quit also save. The island seed, location, inventory, crafting queue, health/food/water, clock, resource depletion and death containers persist. Time does not advance while the game is paused or closed.
-
-Web saves use Godot's browser filesystem backed by IndexedDB. Private browsing, denied storage, iframe restrictions, changing the hosting origin or clearing site data can lose saves. Download and retain a JSON backup; the title/pause menu can restore it after validation, retaining copies of previous save files. A save on one browser/device is not a cloud save. Unknown future save formats and invalid files are preserved instead of silently overwritten.
-
-## Cloud development, validation and builds
-
-No local tool installation is required or performed. GitHub Actions uses a standard Ubuntu runner only for public repositories and installs checksum-pinned official Godot 4.7.2 binaries into that ephemeral runner. The workflow:
-
-1. Imports and compiles Godot scripts.
-2. Runs inventory, crafting, corruption/recovery tests and the actual 3D scene headlessly.
-3. Exports Compatibility Web (single-threaded WebGL 2) and Windows x64.
-4. Checks itch.io's HTML5 file count, path and unpacked-size constraints.
-5. Runs Chromium using software WebGL, exercising startup, gathering, movement, collision and browser save/reload.
-6. Publishes validated preview ZIPs and a smoke-test screenshot as GitHub release assets.
-
-No paid runners, caches or Actions artifact uploads are configured. Standard runners for public repositories are free; GitHub releases have no total storage/bandwidth quota. This design does not change the owner's billing settings or account-wide usage. Workflows skip execution if the repository becomes private.
-
-An automated browser smoke test is not a human playtest or a laptop GPU performance measurement. See [DEVELOPMENT_STATUS.md](DEVELOPMENT_STATUS.md) for actual results and remaining features.
-
-## Architecture
-
-`scripts/core/` owns item contracts, inventory, crafting, deterministic world height and save validation. `scripts/world/` owns procedural rendering, resources and audio. `player.gd` owns physical movement and camera input. `game.gd` orchestrates survival state and persistence; `scripts/ui/` presents it. The scene is generated programmatically from `scenes/island.tscn`; no manual editor wiring is required.
-
-Web Compatibility rendering is the initial quality target. Dynamic shadows default off on Web for lower-end devices and on for native builds; the title/pause menu can toggle them. Cloud browser checks use 960×540 software WebGL, which does not establish hardware performance. High-quality native rendering, construction, combat, wildlife, monuments, processing and advanced progression are later milestones. Visual parity with Rust is not claimed.
-
-## Sources and licenses
-
-Project code and procedural content: MIT, see [LICENSE](LICENSE). Godot: MIT; see [Documentation/THIRD_PARTY.md](Documentation/THIRD_PARTY.md). No asset-store packs, external fonts, paid services or runtime accounts are required.
-
-Toolchain release: https://github.com/godotengine/godot-builds/releases/tag/4.7.2-stable  
-Web constraints: https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_web.html  
-GitHub runner billing: https://docs.github.com/en/billing/concepts/product-billing/github-actions  
-Release limits: https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases  
-itch.io HTML5 limits: https://itch.io/docs/creators/html5
+No native Windows runtime, human playtest, cross-browser or suitable-hardware 60 FPS claim is made. Construction extensions/upkeep, equipment/hazards, weapons/combat, wildlife/NPCs, monuments/research and final art/audio/UI remain roadmap work.

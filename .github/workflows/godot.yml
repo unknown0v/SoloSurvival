@@ -23,7 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Check browser harness syntax
-        run: node --check tools/browser_smoke.cjs
+        run: |
+          node --check tools/browser_smoke.cjs
+          node --check scripts/web/persistence.js
+          node tests/web_persistence.cjs
       - name: Install checksum-pinned Godot in ephemeral cloud runner
         run: python3 tools/setup_godot.py
       - name: Import and compile scripts

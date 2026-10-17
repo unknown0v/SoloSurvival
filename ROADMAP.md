@@ -3,7 +3,7 @@
 The owner authorizes continuous development through version 1.0 during available execution. No milestone requires another ordinary approval. Read DEVELOPMENT_STATUS.md for actual progress; unchecked work is not implemented by this roadmap.
 
 - [x] M1: persistent island, first-person controls, resources, inventory, basic crafting, survival, day/night, death, saves, Web/Windows cloud exports.
-- [ ] M2: validate square foundations/walls/floors/roofs/frames/doors, preview/snapping, tiers/repair/damage/support, storage, cooking and smelting.
+- [x] M2: validate square foundations/walls/floors/roofs/frames/doors, preview/snapping, tiers/repair/damage/support, storage, cooking and smelting.
 - [ ] Phase A completion: triangle pieces, half walls, windows, stairs, practical double doors, armored tier, decay/cupboard upkeep, sleeping bags/beds, locks, workbenches and basic defenses.
 - [ ] Phase B: bleeding, temperature/biome exposure, radiation, clothing/armor, food/water/healing balance and meaningful recovery.
 - [ ] Phase C: equipment, quick transfers, dropped items, loot, bench-gated recipes, expanded item/recipe content and conservation regressions.
@@ -20,3 +20,5 @@ The owner authorizes continuous development through version 1.0 during available
 - [ ] Phase N: only after RELEASE_CHECKLIST.md passes, tag 1.0.0 with source, offline Windows build, Web build, licenses, release notes and honest limitations.
 
 Dependencies: construction → processing/benches → weapons/armor → wildlife/NPCs → monuments/progression. Survival, persistence, UI, assets and performance evolve with each playable increment. Preserve one island/seed and all validated releases.
+
+M2 validation: source `b30937aefd4b0702c036603df3eb4e8af5471325`, [run 39044434999](https://github.com/unknown0v/SoloSurvival/actions/runs/39044434999), 95 headless assertions, both exports, exported/public browser construction and processing save/reload. Regional tree batching and fuller browser shelter checks are the active follow-up; this does not complete Phase A.

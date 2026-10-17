@@ -28,3 +28,6 @@ Continue the existing single-player Godot 4/GDScript game; never recreate/reset 
 
 ## Quality and scope
 Original code/assets or documented compatible licenses only. No proprietary Rust assets/source, DRM bypass or parity claims without evidence. Functional gameplay precedes decoration. Keep modules focused and avoid duplicated parsers/representations. Maintain all six project-memory files in sync. Native Windows runtime, human playtest and suitable-hardware performance remain explicit release gates until measured.
+
+## Latest continuation checkpoint
+M2 source `b30937aefd4b0702c036603df3eb4e8af5471325` passed run 39044434999 with 95 assertions and full exported/public browser construction, cooking, smelting and durable reload checks. Preserve `preview-b30937aefd4b` and M1 releases. The active follow-up batches tree rendering and adds fuller browser wall/roof coverage; inspect its CI and fix regressions before further Phase A work. Browser save confirmation must compare the exact saved file in IndexedDB; never treat a staged write as durable. Continue building extensions/upkeep/deployables, then the remaining roadmap. See current DEVELOPMENT_STATUS.md for exact latest validation.

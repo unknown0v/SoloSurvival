@@ -5,7 +5,7 @@ This project is an early playable work in progress, not version 1.0.
 - [x] Godot source and cloud build toolchain exist.
 - [x] First milestone browser runtime and save/reload verified.
 - [x] Windows x64 export exists (unsigned; export is not a runtime test).
-- [ ] Milestone 2 construction/processing cloud and browser acceptance verified.
+- [x] Milestone 2 construction/processing cloud and exported/public browser integration verified (fixture-assisted; full-game acceptance remains open).
 - [ ] Expanded construction, deployables, upkeep and repair/damage complete.
 - [ ] Survival hazards, recovery and equipment integrated.
 - [ ] Weapons, ammo, reload/recoil, hit/armor/projectile systems integrated.

@@ -145,11 +145,16 @@ func update_candidate() -> void:
 			level = int(target.level)
 			if build_kind in ["floor","roof"] and target.kind in ["wall","doorframe"]:
 				level += 1
-	for p in game.settlement.pieces:
-		var distance: int = absi(int(p.cell[0])-int(cell[0]))+absi(int(p.cell[1])-int(cell[1]))
-		if distance<=1:
-			y = float(p.y)
-			break
+	# Preserve the selected socket's base; otherwise prefer an exact cell over a neighbour.
+	if not hit.collider.has_meta("structure") or build_kind=="foundation":
+		var closest: int = 2
+		for p in game.settlement.pieces:
+			if p.kind!="foundation":
+				continue
+			var distance: int = absi(int(p.cell[0])-int(cell[0]))+absi(int(p.cell[1])-int(cell[1]))
+			if distance<closest:
+				y = float(p.y)
+				closest = distance
 	candidate = game.settlement.make_piece(build_kind,cell,y,level,edge)
 	placement_reason = check_placement(candidate)
 

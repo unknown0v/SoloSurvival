@@ -12,16 +12,16 @@ Run on the actual integrated build before 1.0. Record source SHA, platform, inpu
 | 6 | Manage inventory | Toggle/save browser, stacking/splitting/transfers headless; drag/drop browser pending |
 | 7 | Hunt animals | Not implemented |
 | 8 | Collect food and water | Plants/river and consumables implemented; full walkthrough pending |
-| 9 | Build foundations | M2 real-scene tests pass; browser acceptance in progress |
-| 10 | Place walls and roofs | M2 support/collision/domain tests; browser acceptance in progress |
-| 11 | Add doors | M2 real-scene operation/obstruction tests pass; browser acceptance in progress |
-| 12 | Upgrade structures | M2 material-tier tests pass; browser acceptance in progress |
+| 9 | Build foundations | M2 real-scene tests pass; exported/public Chromium integration verified (fixture-assisted) |
+| 10 | Place walls and roofs | M2 support/collision/domain tests; exported/public Chromium integration verified (fixture-assisted) |
+| 11 | Add doors | M2 real-scene operation/obstruction tests pass; exported/public Chromium integration verified (fixture-assisted) |
+| 12 | Upgrade structures | M2 material-tier tests pass; exported/public Chromium integration verified (fixture-assisted) |
 | 13 | Repair structures | M2 damage/material/health tests pass; graphical interaction pending |
-| 14 | Place storage | M2 implementation and contents validation; browser acceptance in progress |
-| 15 | Craft/place campfire | M2 resource-cost placement; browser acceptance in progress |
-| 16 | Cook food | Berries cooking model tests pass; browser acceptance in progress; hunting/meat pending |
-| 17 | Craft/place furnace | M2 resource-cost placement; browser acceptance in progress |
-| 18 | Smelt ore | Ore/fuel/output model tests pass; browser acceptance in progress |
+| 14 | Place storage | M2 implementation and contents validation; exported/public Chromium integration verified (fixture-assisted) |
+| 15 | Craft/place campfire | M2 resource-cost placement; exported/public Chromium integration verified (fixture-assisted) |
+| 16 | Cook food | Berries cooking model tests pass; exported/public Chromium integration verified (fixture-assisted); hunting/meat pending |
+| 17 | Craft/place furnace | M2 resource-cost placement; exported/public Chromium integration verified (fixture-assisted) |
+| 18 | Smelt ore | Ore/fuel/output model tests pass; exported/public Chromium integration verified (fixture-assisted) |
 | 19 | Craft weapons | Not implemented |
 | 20 | Explore monuments | Not implemented |
 | 21 | Fight hostile NPCs | Not implemented |
@@ -30,9 +30,9 @@ Run on the actual integrated build before 1.0. Record source SHA, platform, inpu
 | 24 | Survive environmental hazards | Fall/drowning/deprivation implemented; temperature/bleeding/radiation pending |
 | 25 | Die and respawn | Production-scene regression passes |
 | 26 | Recover belongings | Production-scene conservation regression passes |
-| 27 | Return to existing base | Building persistence under validation |
+| 27 | Return to existing base | M2 construction/storage/station reload verified |
 | 28 | Save and quit | Browser manual save verified; Windows runtime pending |
 | 29 | Restart game | Browser page reload verified; native executable restart pending |
-| 30 | Continue same persistent world | M1 inventory/location verified; M2 structures/stations under validation |
+| 30 | Continue same persistent world | M1 inventory/location verified; M2 structures/stations verified on exported/public browser builds |
 
 None of this table establishes human playtesting, Windows runtime validation, Rust parity, suitable-hardware performance or 1.0 readiness. Update only from executed evidence.
