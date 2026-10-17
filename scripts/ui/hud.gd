@@ -142,6 +142,7 @@ func build_title() -> void:
 	start_button.custom_minimum_size.y = 52
 	content.add_child(start_button)
 	content.add_child(button("SAVE WORLD",func(): game.save_world()))
+	content.add_child(button("TOGGLE DYNAMIC SHADOWS",func(): game.sun.shadow_enabled = not game.sun.shadow_enabled))
 	content.add_child(button("DOWNLOAD SAVE BACKUP",game.download_save))
 	if OS.has_feature("web"):
 		content.add_child(button("RESTORE SAVE BACKUP",game.import_backup))

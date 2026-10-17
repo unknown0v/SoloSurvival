@@ -55,7 +55,7 @@ An automated browser smoke test is not a human playtest or a laptop GPU performa
 
 `scripts/core/` owns item contracts, inventory, crafting, deterministic world height and save validation. `scripts/world/` owns procedural rendering, resources and audio. `player.gd` owns physical movement and camera input. `game.gd` orchestrates survival state and persistence; `scripts/ui/` presents it. The scene is generated programmatically from `scenes/island.tscn`; no manual editor wiring is required.
 
-Web Compatibility rendering is the initial quality target. High-quality native rendering, construction, combat, wildlife, monuments, processing and advanced progression are later milestones. Visual parity with Rust is not claimed.
+Web Compatibility rendering is the initial quality target. Dynamic shadows default off on Web for lower-end devices and on for native builds; the title/pause menu can toggle them. Cloud browser checks use 960×540 software WebGL, which does not establish hardware performance. High-quality native rendering, construction, combat, wildlife, monuments, processing and advanced progression are later milestones. Visual parity with Rust is not claimed.
 
 ## Sources and licenses
 

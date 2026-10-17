@@ -103,7 +103,7 @@ func setup_environment() -> void:
 	world_environment.environment = environment
 	add_child(world_environment)
 	sun = DirectionalLight3D.new()
-	sun.shadow_enabled = true
+	sun.shadow_enabled = not OS.has_feature("web")
 	sun.directional_shadow_max_distance = 95
 	sun.light_color = Color("#ffe6bd")
 	sun.light_energy = 1.2
@@ -143,7 +143,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:

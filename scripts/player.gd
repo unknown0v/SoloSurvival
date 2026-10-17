@@ -61,8 +61,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and game.playing and not game.menu_open and Input.mouse_mode==Input.MOUSE_MODE_CAPTURED:
 		rotation.y = wrapf(rotation.y-event.relative.x*sensitivity,-PI,PI)
 		pitch = clampf(pitch-event.relative.y*sensitivity,-1.45,1.45)
-	if event is InputEventMouseButton and event.pressed and game.playing and not game.menu_open:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP:
+	if event is InputEventMouseButton and event.pressed and game.playing and not game.menu_open and not game.paused:
+		if event.button_index==MOUSE_BUTTON_LEFT and cooldown<=0:
+			cooldown = 0.65
+			game.primary_action()
+		elif event.button_index==MOUSE_BUTTON_WHEEL_UP:
 			game.select_slot(posmod(game.selected-1,6))
 		elif event.button_index==MOUSE_BUTTON_WHEEL_DOWN:
 			game.select_slot((game.selected+1)%6)

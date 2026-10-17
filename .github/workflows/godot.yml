@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: godot-${{ github.ref }}
@@ -65,3 +66,9 @@ jobs:
         run: |
           tag="preview-${GITHUB_SHA:0:12}"
           gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival first playable (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
+
+      - name: Publish validated browser build to free GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish_web.py
