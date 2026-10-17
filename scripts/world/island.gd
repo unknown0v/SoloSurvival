@@ -132,7 +132,7 @@ func harvest(id: String, tool: String) -> bool:
 	if float(r.state.hp)<=0:
 		return false
 	var kind: String = r.kind
-	if kind not in ["cloth","berries"] and tool not in ["rock","axe","pickaxe"]:
+	if kind not in ["cloth","berries"] and tool not in ["rock","axe","pickaxe","metal_pickaxe"]:
 		game.say("Select your rock or a crafted gathering tool.")
 		return false
 	var item: String = "wood" if kind=="tree" else kind
@@ -141,6 +141,8 @@ func harvest(id: String, tool: String) -> bool:
 		amount = 45
 	if tool=="pickaxe" and kind in ["stone","ore"]:
 		amount = 36
+	if tool=="metal_pickaxe" and kind in ["stone","ore"]:
+		amount = 60
 	if kind=="cloth":
 		amount = 15
 	if kind=="berries":
@@ -149,7 +151,7 @@ func harvest(id: String, tool: String) -> bool:
 	if gathered<=0:
 		game.say("Inventory full. Make room before gathering.")
 		return false
-	r.state.hp = maxf(0,float(r.state.hp)-(35.0 if tool in ["axe","pickaxe"] else 20.0)*gathered/amount)
+	r.state.hp = maxf(0,float(r.state.hp)-(50.0 if tool=="metal_pickaxe" else 35.0 if tool in ["axe","pickaxe"] else 20.0)*gathered/amount)
 	if kind in ["cloth","berries"]:
 		r.state.hp = 0.0
 	if float(r.state.hp)<=0:

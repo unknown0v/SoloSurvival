@@ -89,4 +89,4 @@ jobs:
         shell: bash
         run: |
           python3 tools/check_hosted.py
-          GAME_URL="$(cat build/hosted-url.txt)" NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs
+          GAME_URL="$(cat build/hosted-url.txt)" HOSTED_CHECK=true NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs

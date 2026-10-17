@@ -36,6 +36,9 @@ static func boxes(p: Dictionary) -> Array:
 		"doorframe": return [[Vector3(-1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(1.05,1.5,-1.5),Vector3(0.9,3,0.16)],[Vector3(0,2.65,-1.5),Vector3(1.2,0.7,0.16)]]
 		"door":
 			return [[Vector3(-0.59,1.15,-0.91),Vector3(0.12,2.28,1.16)]] if p.open else [[Vector3(0,1.15,-1.5),Vector3(1.16,2.28,0.12)]]
+		"cupboard": return [[Vector3(0,0.85,0),Vector3(0.8,1.7,0.8)]]
+		"sleeping_bag": return [[Vector3(0,0.07,0),Vector3(0.85,0.14,1.8)]]
+		"workbench": return [[Vector3(0,0.5,0),Vector3(1.4,1,0.75)]]
 		"storage": return [[Vector3(0,0.38,0),Vector3(1.4,0.76,0.9)]]
 		"campfire": return [[Vector3(0,0.18,0),Vector3(0.9,0.36,0.9)]]
 		"furnace": return [[Vector3(0,0.65,0),Vector3(1.15,1.3,1.15)]]
@@ -123,7 +126,7 @@ func _physics_process(dt: float) -> void:
 	if not candidate.is_empty():
 		preview = visual_piece(candidate,good if placement_reason=="" else bad)
 		add_child(preview)
-	game.prompt = build_kind.to_upper()+"  /  "+("LEFT CLICK PLACE" if placement_reason=="" else placement_reason)+"\n1–9 PIECE   R ROTATE   B EXIT"
+	game.prompt = build_kind.to_upper()+"  /  "+("LEFT CLICK PLACE" if placement_reason=="" else placement_reason)+"\n1–9 PIECE   G NEXT TYPE   R ROTATE   B EXIT"
 
 func update_candidate() -> void:
 	candidate = {}

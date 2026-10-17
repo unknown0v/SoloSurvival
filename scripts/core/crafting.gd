@@ -3,10 +3,12 @@ const Items = preload("res://scripts/core/items.gd")
 const Inventory = preload("res://scripts/core/inventory.gd")
 var jobs: Array = []
 
-func enqueue(id: String, bag) -> bool:
+func enqueue(id: String, bag, bench_tier: int = 0) -> bool:
 	if not Items.RECIPES.has(id) or jobs.size() >= 8:
 		return false
 	var recipe: Dictionary = Items.RECIPES[id]
+	if int(recipe.get("bench",0))>bench_tier:
+		return false
 	if not bag.pay(recipe.cost):
 		return false
 	jobs.append({"id":id, "remaining":recipe.time})

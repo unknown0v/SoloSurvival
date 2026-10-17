@@ -19,3 +19,5 @@ Never replace unmeasured comparisons with claims of Rust parity. Refresh entries
 ## Documented references inspected 2026-10-17
 
 [Facepunch tool cupboard, decay and building privilege](https://wiki.facepunch.com/rust/the_tool_cupboard) documents upkeep preventing building decay. This informs planned single-player upkeep; multiplayer building privileges are outside scope. No numerical timing or stability parity is established by this reference, and SoloSurvival upkeep is not yet implemented.
+
+Current base-progression increment (pending validation): cupboard protection follows connected cells and material-specific costs, with pooled cupboard inventory, independent rates and a 30-minute initial grace. No offline decay. Sleeping bags bind solo respawn; nearby workbenches gate a metal tool. These are independent approximations, not verified Rust timing, geometry or progression parity.

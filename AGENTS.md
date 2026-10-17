@@ -13,7 +13,7 @@ Continue the existing single-player Godot 4/GDScript game; never recreate/reset 
 - Godot Compatibility Web, standalone offline Windows, same world seed 197403.
 - Core models own inventory, crafting, construction and save validation; world adapters own meshes/colliders; UI calls production actions.
 - Keep resource/item recipes data-driven. Transfers and costs must conserve items atomically; reserve output capacity before consumption.
-- Existing save path user://island-v1.json is stable. Read schema 1 and 2; write schema 2. Preserve backups, integrity envelopes, rejected files and unsupported future versions. Add migration tests for every extension; never silently reset.
+- Existing save path user://island-v1.json is stable. Read schemas 1, 2 and 3; write schema 3. Preserve backups, integrity envelopes, rejected files and unsupported future versions. Add migration tests for every extension; never silently reset.
 - Construction support must originate at foundations; disconnected cycles cannot support themselves. Nonempty affected storage blocks destruction until a persistent loot alternative exists.
 - Preserve source inputs. JSON numbers are floats in Godot: validate integer bounds, compare numeric values explicitly, and normalize once at an owning boundary.
 
@@ -31,3 +31,5 @@ Original code/assets or documented compatible licenses only. No proprietary Rust
 
 ## Latest continuation checkpoint
 M2 source `b30937aefd4b0702c036603df3eb4e8af5471325` passed run 39044434999 with 95 assertions and full exported/public browser construction, cooking, smelting and durable reload checks. Preserve `preview-b30937aefd4b` and M1 releases. The active follow-up batches tree rendering and adds fuller browser wall/roof coverage; inspect its CI and fix regressions before further Phase A work. Browser save confirmation must compare the exact saved file in IndexedDB; never treat a staged write as durable. Continue building extensions/upkeep/deployables, then the remaining roadmap. See current DEVELOPMENT_STATUS.md for exact latest validation.
+
+Active Phase A follow-up adds cupboard upkeep/decay, sleeping-bag binding/safe respawn and workbench-gated metal tools. SaveStore owns version-aware settlement extraction; never interpret extension fields from an older schema as newer state. Schemas 1/2 remain readable; schema 3 adds bound bags and maintenance clock/grace. New/migrated worlds get 30 simulated minutes of upkeep grace; no offline decay. Read current CI/status before claiming this increment verified.

@@ -176,6 +176,66 @@ func construction_tests() -> void:
 	world.structures = [{"kind":"unknown"}]
 	check(Save.validate(world)!="","Invalid version-two extension rejected")
 
+func base_progression_tests() -> void:
+	var model = Settlement.new()
+	var bag = Inventory.new(36)
+	bag.add("wood",3000)
+	bag.add("stone",1000)
+	bag.add("metal",300)
+	bag.add("cloth",100)
+	var foundation: Dictionary = model.place(model.make_piece("foundation",[0,0],10,0,0),bag)
+	var box: Dictionary = model.place(model.make_piece("cupboard",[0,0],10,0,0),bag)
+	check(not box.is_empty() and box.inventory.size()==12,"Cupboard has persistent upkeep inventory")
+	var resources = Inventory.new(12)
+	resources.slots = box.inventory
+	resources.add("wood",10)
+	model.upkeep_grace = 0
+	model.tick(300)
+	check(foundation.hp==80 and resources.count_item("wood")==9,"Paid upkeep consumes exact material and prevents decay")
+	resources.remove("wood",9)
+	model.tick(300)
+	check(foundation.hp==72,"Unpaid upkeep damages the building")
+	check(not model.strike(foundation.id,-20) and foundation.hp==72,"Negative damage cannot create health")
+	model.place(model.make_piece("foundation",[1,0],10,0,0),bag)
+	var home: Dictionary = model.place(model.make_piece("sleeping_bag",[1,0],10,0,0),bag)
+	check(not home.is_empty() and model.bind_bag(home.id),"Sleeping bag can bind respawn")
+	check(model.respawn_piece().id==home.id,"Bound bag is selected by the owner")
+	var bench: Dictionary = model.place(model.make_piece("workbench",[0,0],10,0,0),bag)
+	check(not bench.is_empty(),"Workbench charges construction resources")
+	var crafting = Crafting.new()
+	var before: int = bag.count_item("metal")
+	check(not crafting.enqueue("metal_pickaxe",bag),"Advanced tool recipe requires a workbench")
+	check(bag.count_item("metal")==before,"Failed workbench requirement cannot reserve ingredients")
+	check(crafting.enqueue("metal_pickaxe",bag,1),"Workbench unlocks the metal tool recipe")
+	check(crafting.tick(8,bag)=="metal_pickaxe","Workbench tool completes with durability")
+	check(Settlement.valid(JSON.parse_string(JSON.stringify(model.pieces))),"Bag binding and cupboard survive JSON validation")
+	var legacy: Dictionary = fixture()
+	legacy.structures = "uninterpreted version-one extension"
+	legacy.maintenance = "uninterpreted version-one extension"
+	check(Save.settlement_state(legacy).pieces.is_empty() and Save.settlement_state(legacy).grace==1800,"Old schemas do not reinterpret newer extension fields")
+	var data: Dictionary = fixture()
+	data.version = 3
+	data.structures = model.pieces.duplicate(true)
+	data.maintenance = {"grace":model.upkeep_grace,"clock":model.upkeep_clock}
+	check(Save.unwrap(Save.encode_save(data)).has("data"),"Schema three preserves upkeep, bag and workbench")
+	data.maintenance.clock = -1
+	check(Save.validate(data)!="","Invalid upkeep clock is rejected")
+	# Material-specific protection and independent-base separation.
+	resources.add("wood",10)
+	model.upgrade(foundation.id,bag)
+	model.upgrade(foundation.id,bag)
+	var before_hp: float = foundation.hp
+	model.tick(300)
+	check(foundation.hp<before_hp,"Wood stock cannot protect stone construction")
+	check(model.find(home.id).respawn,"Upkeep retains a surviving bound bag")
+	var distant: Dictionary = model.place(model.make_piece("foundation",[10,10],10,0,0),bag)
+	resources.add("stone",10)
+	var notifications: Array = [0]
+	model.changed.connect(func(): notifications[0] += 1)
+	model.tick(300)
+	check(notifications[0]==1,"Upkeep coalesces component mutations into one notification")
+	check(distant.hp<80,"Disconnected base is not protected by another cupboard")
+
 func browser_fixture(game) -> void:
 	# Import a real version-one save through the browser file chooser, not a game command bridge.
 	var math = game.world.math
@@ -215,6 +275,18 @@ func browser_fixture(game) -> void:
 			DirAccess.make_dir_recursive_absolute("res://build")
 			write_text("res://build/.gdignore","")
 			write_text("res://build/milestone1-fixture.json",Save.encode_save(data))
+			var advanced: Dictionary = data.duplicate(true)
+			var supplies = Inventory.new(36)
+			for id in ["rock","building_plan","hammer"]:
+				supplies.add(id,1)
+			supplies.add("wood",1000)
+			supplies.add("stone",1000)
+			supplies.add("metal",200)
+			supplies.add("cloth",90)
+			advanced.inventory = supplies.slots
+			advanced.version = 2
+			advanced.structures = []
+			write_text("res://build/progression-fixture.json",Save.encode_save(advanced))
 			print("CONSTRUCTION_BROWSER_FIXTURE cell="+str([x,z])+" y="+str(y))
 			return
 	check(false,"Find dry unobstructed terrain for browser construction fixture")
@@ -311,11 +383,29 @@ func construction_scene_tests(game) -> void:
 	check(absf(game.player.position.y-at.y-3)<0.2,"Player stands on constructed upper floor")
 	var storage: Dictionary = game.settlement.make_piece("storage",door.cell,float(door.y),1,0)
 	check(game.buildings.check_placement(storage)!="","Placement rejects overlap with the player")
-	check(Save.validate(game.capture())=="","Production building world serializes valid schema two")
+	check(Save.validate(game.capture())=="","Production building world serializes current schema")
+	game.bag.add("cloth",100)
+	game.bag.add("metal",150)
+	game.player.position = at+Vector3(1,3.1,0)
+	for i in range(2):
+		await physics_frame
+	var home: Dictionary = game.settlement.place(game.settlement.make_piece("sleeping_bag",door.cell,float(door.y),1,0),game.bag)
+	check(not home.is_empty() and game.settlement.bind_bag(home.id),"Production world binds a supported upper-floor bag")
+	game.damage(100)
+	for i in range(2):
+		await physics_frame
+	game.respawn()
+	check(game.player.position.distance_to(game.Buildings.origin(home))<1.2,"Death respawns beside the bound bag")
+	check(game.player.position.x<at.x,"Respawn chooses a clear side rather than the corpse collision")
+	game.recover_corpse(str(game.corpses.back().id))
+	var bench: Dictionary = game.settlement.place(game.settlement.make_piece("workbench",door.cell,float(door.y),0,0),game.bag)
+	check(not bench.is_empty() and game.workbench_tier()==1,"Nearby production workbench provides a crafting tier")
+	check(Save.validate(game.capture())=="","Live world captures bag, bench and upkeep state")
 
 func run_tests() -> void:
 	domain_tests()
 	construction_tests()
+	base_progression_tests()
 	save_tests()
 	var game = Game.new()
 	root.add_child(game)

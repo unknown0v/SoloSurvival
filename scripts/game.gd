@@ -54,7 +54,10 @@ func _ready() -> void:
 		stats = saved.stats.duplicate(true)
 		resource_data = saved.resources.duplicate(true)
 		corpses = saved.corpses.duplicate(true)
-		settlement.pieces = saved.get("structures",[]).duplicate(true)
+		var built: Dictionary = SaveStore.settlement_state(saved)
+		settlement.pieces = built.pieces
+		settlement.upkeep_grace = built.grace
+		settlement.upkeep_clock = built.clock
 		hour = float(saved.hour)
 		elapsed = float(saved.elapsed)
 		selected = int(saved.selected)
@@ -170,7 +173,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"workbench_tier":workbench_tier(),"attack_ready":player.cooldown<=0,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -192,6 +195,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			say("Building plan: 1–9 select, R rotate, left click place." if build_mode else "Building plan put away.")
 		else:
 			say("Craft a building plan in your inventory first.")
+	elif event.physical_keycode==KEY_G and build_mode and not menu_open:
+		buildings.build_kind = Settlement.KINDS[(Settlement.KINDS.find(buildings.build_kind)+1)%Settlement.KINDS.size()]
+		buildings.timer = 0
 	elif event.physical_keycode==KEY_R and build_mode and not menu_open:
 		buildings.edge = (buildings.edge+1)%4
 		buildings.timer = 0
@@ -247,7 +253,7 @@ func primary_action() -> void:
 	if id in ["berries","cooked_berries","water","bandage"]:
 		use_item(selected)
 		return
-	if id not in ["rock","axe","pickaxe"]:
+	if id not in ["rock","axe","pickaxe","metal_pickaxe"]:
 		return
 	var item: Dictionary = bag.slots[selected]
 	if int(item.condition)<=0:
@@ -272,7 +278,17 @@ func interact() -> void:
 		if body.has_meta("structure"):
 			var id: String = str(body.get_meta("structure"))
 			var p: Dictionary = settlement.find(id)
-			if p.kind=="door":
+			if p.kind=="sleeping_bag":
+				settlement.bind_bag(id)
+				say("Sleeping bag bound. Future respawns return here while it stands.")
+				save_world(false)
+			elif p.kind=="workbench":
+				menu_open = true
+				station_id = ""
+				build_mode = false
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+				hud.tabs.current_tab = 0
+			elif p.kind=="door":
 				buildings.toggle_door(id)
 			elif Settlement.station(p.kind):
 				open_station(id)
@@ -326,7 +342,7 @@ func use_item(index: int) -> void:
 func queue_craft(id: String) -> void:
 	if float(stats.health)<=0:
 		return
-	if crafts.enqueue(id,bag):
+	if crafts.enqueue(id,bag,workbench_tier()):
 		say("Queued "+str(items.ITEMS[id].name))
 	else:
 		say("Missing resources or queue full.")
@@ -373,7 +389,7 @@ func respawn() -> void:
 		bag.add("rock",1)
 	if bag.count_item("torch")==0:
 		bag.add("torch",1)
-	player.position = Vector3(-150,world.math.height(-150,-155)+0.5,-155)
+	player.position = respawn_position()
 	player.velocity = Vector3.ZERO
 	start_playing()
 	say("Your belongings remain where you fell.")
@@ -399,7 +415,7 @@ func recover_corpse(id: String) -> void:
 
 func capture() -> Dictionary:
 	var p: Vector3 = player.position
-	return {"version":2,"structures":settlement.pieces.duplicate(true),"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
+	return {"version":3,"maintenance":{"grace":settlement.upkeep_grace,"clock":settlement.upkeep_clock},"structures":settlement.pieces.duplicate(true),"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
 
 func save_world(notify: bool = true) -> void:
 	if not ready_to_play:
@@ -502,7 +518,7 @@ func open_station(id: String) -> void:
 
 func toggle_station() -> void:
 	var p: Dictionary = settlement.find(station_id)
-	if p.is_empty() or p.kind=="storage":
+	if p.is_empty() or p.kind not in ["campfire","furnace"]:
 		return
 	p.active = not p.active
 	settlement.changed.emit()
@@ -528,3 +544,27 @@ func station_transfer(from_player: bool) -> void:
 	bag.changed.emit()
 	save_world(false)
 	hud.refresh_station()
+
+func workbench_tier() -> int:
+	if player==null:
+		return 0
+	for p in settlement.pieces:
+		if p.kind=="workbench" and player.position.distance_to(Buildings.origin(p))<=6:
+			return 1
+	return 0
+
+func respawn_position() -> Vector3:
+	var home: Dictionary = settlement.respawn_piece()
+	if not home.is_empty():
+		var capsule := CapsuleShape3D.new()
+		capsule.radius = 0.31
+		capsule.height = 1.8
+		for offset in [Vector3(0.95,0.15,0),Vector3(-0.95,0.15,0),Vector3(0,0.15,0.95),Vector3(0,0.15,-0.95)]:
+			var at: Vector3 = Buildings.origin(home)+offset
+			var query := PhysicsShapeQueryParameters3D.new()
+			query.shape = capsule
+			query.transform = Transform3D(Basis.IDENTITY,at+Vector3.UP*0.9)
+			query.collision_mask = 1
+			if get_world_3d().direct_space_state.intersect_shape(query,1).is_empty():
+				return at
+	return Vector3(-150,world.math.height(-150,-155)+0.5,-155)

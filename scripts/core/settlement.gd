@@ -1,20 +1,28 @@
 extends RefCounted
 const Inventory = preload("res://scripts/core/inventory.gd")
-const KINDS = ["foundation","wall","floor","roof","doorframe","door","storage","campfire","furnace"]
+const KINDS = ["foundation","wall","floor","roof","doorframe","door","storage","campfire","furnace","cupboard","sleeping_bag","workbench"]
 const COSTS = {
 	"foundation":{"wood":30},"wall":{"wood":25},"floor":{"wood":25},"roof":{"wood":25},
 	"doorframe":{"wood":20},"door":{"wood":40},"storage":{"wood":60},
-	"campfire":{"wood":40,"stone":30},"furnace":{"wood":60,"stone":200}
+	"campfire":{"wood":40,"stone":30},"furnace":{"wood":60,"stone":200},
+	"cupboard":{"wood":250,"stone":50},"sleeping_bag":{"wood":50,"cloth":30},"workbench":{"wood":300,"metal":100}
 }
 const HEALTH = [80.0,250.0,600.0,1000.0]
 const TIERS = ["Twig","Wood","Stone","Metal"]
 const MAX_PIECES: int = 256
 var pieces: Array = []
 var serial: int = 0
+var upkeep_clock: float = 0
+var upkeep_grace: float = 1800
+var batching: bool = false
+var dirty: bool = false
 signal changed
 
 static func station(kind: String) -> bool:
-	return kind in ["storage","campfire","furnace"]
+	return kind in ["storage","campfire","furnace","cupboard"]
+
+static func deployable(kind: String) -> bool:
+	return station(kind) or kind in ["sleeping_bag","workbench"]
 
 static func same_cell(a: Dictionary, b: Dictionary) -> bool:
 	return int(a.cell[0])==int(b.cell[0]) and int(a.cell[1])==int(b.cell[1]) and absf(float(a.y)-float(b.y))<0.05
@@ -23,7 +31,7 @@ static func horizontal(kind: String) -> bool:
 	return kind in ["foundation","floor","roof"]
 
 static func max_health(p: Dictionary) -> float:
-	return 250.0 if station(p.kind) else HEALTH[int(p.tier)]
+	return 250.0 if deployable(p.kind) else HEALTH[int(p.tier)]
 
 func find(id: String) -> Dictionary:
 	for p in pieces:
@@ -54,7 +62,7 @@ static func edge_step(edge: int) -> Vector2i:
 	return [Vector2i(0,-1),Vector2i(1,0),Vector2i(0,1),Vector2i(-1,0)][edge]
 
 func make_piece(kind: String, cell: Array, y: float, level: int, edge: int) -> Dictionary:
-	return {"id":"","kind":kind,"cell":cell.duplicate(),"y":y,"level":level,"edge":edge,"tier":0,"hp":250.0 if station(kind) else 80.0,"open":false,"inventory":Inventory.new(12 if station(kind) else 0).slots,"active":false,"progress":0.0}
+	return {"id":"","kind":kind,"cell":cell.duplicate(),"y":y,"level":level,"edge":edge,"tier":0,"hp":250.0 if deployable(kind) else 80.0,"open":false,"inventory":Inventory.new(12 if station(kind) else 0).slots,"active":false,"progress":0.0,"respawn":false}
 
 # A monotone support calculation cannot make a disconnected cycle support itself.
 func supports(records: Array) -> Dictionary:
@@ -72,7 +80,7 @@ func supports(records: Array) -> Dictionary:
 				if value<=0 or p.id==source.id:
 					continue
 				if same_cell(p,source):
-					if p.kind in ["wall","doorframe","storage","campfire","furnace"] and source.kind in ["foundation","floor"] and source.level==p.level:
+					if (p.kind in ["wall","doorframe"] or deployable(p.kind)) and source.kind in ["foundation","floor"] and source.level==p.level:
 						best = maxf(best,value-0.08)
 					elif p.kind=="door" and source.kind=="doorframe" and source.level==p.level and source.edge==p.edge:
 						best = maxf(best,value-0.04)
@@ -113,11 +121,11 @@ func place(candidate: Dictionary, bag) -> Dictionary:
 	if not bag.pay(COSTS[p.kind]):
 		return {}
 	pieces.append(p)
-	changed.emit()
+	notify_changed()
 	return p
 
 func upgrade_cost(p: Dictionary) -> Dictionary:
-	if station(p.kind) or int(p.tier)>=3:
+	if deployable(p.kind) or int(p.tier)>=3:
 		return {}
 	return [{"wood":80},{"stone":120},{"metal":60}][int(p.tier)].duplicate()
 
@@ -130,7 +138,7 @@ func upgrade(id: String, bag) -> bool:
 		return false
 	p.tier += 1
 	p.hp = max_health(p)
-	changed.emit()
+	notify_changed()
 	return true
 
 func repair(id: String, bag) -> bool:
@@ -142,7 +150,7 @@ func repair(id: String, bag) -> bool:
 	if not bag.remove(resource,cost):
 		return false
 	p.hp = max_health(p)
-	changed.emit()
+	notify_changed()
 	return true
 
 func collapse_set(id: String) -> Array:
@@ -162,22 +170,28 @@ func dismantle(id: String) -> bool:
 		if p.id in lost and p.inventory.any(func(s): return not s.is_empty()):
 			return false
 	pieces = pieces.filter(func(p): return p.id not in lost)
-	changed.emit()
+	notify_changed()
 	return true
 
 # Destruction with stored items is blocked in this single-player milestone.
 # This preserves ownership until the player can empty the affected containers.
 func strike(id: String, amount: float) -> bool:
+	if not is_finite(amount) or amount<=0:
+		return false
 	var p: Dictionary = find(id)
 	if p.is_empty():
 		return false
 	if float(p.hp)>amount:
 		p.hp -= amount
-		changed.emit()
+		notify_changed()
 		return true
 	return dismantle(id)
 
 func tick(dt: float) -> void:
+	if not is_finite(dt) or dt<=0:
+		return
+	batching = true
+	tick_upkeep(dt)
 	for p in pieces:
 		if p.kind not in ["campfire","furnace"] or not p.active:
 			continue
@@ -195,17 +209,29 @@ func tick(dt: float) -> void:
 			inv.remove("wood",1)
 			inv.add(output,1)
 			p.progress = 0.0
-			changed.emit()
+			notify_changed()
+	batching = false
+	if dirty:
+		notify_changed()
 
 static func valid(data: Variant) -> bool:
 	if not data is Array or data.size()>MAX_PIECES:
 		return false
 	var ids: Dictionary = {}
+	var respawns: int = 0
 	var model = load("res://scripts/core/settlement.gd").new()
 	for p in data:
 		if not p is Dictionary or not p.get("id") is String or p.id.length()<1 or p.id.length()>40 or ids.has(p.id):
 			return false
 		ids[p.id] = true
+		if not p.get("respawn",false) is bool:
+			return false
+		if p.get("respawn",false):
+			if p.get("kind")!="sleeping_bag":
+				return false
+			respawns += 1
+			if respawns>1:
+				return false
 		if p.get("kind") not in KINDS or not p.get("cell") is Array or p.cell.size()!=2:
 			return false
 		for v in p.cell:
@@ -215,7 +241,7 @@ static func valid(data: Variant) -> bool:
 			return false
 		if not numeric(p.get("edge"),0,3) or float(p.edge)!=floorf(float(p.edge)) or not numeric(p.get("tier"),0,3) or float(p.tier)!=floorf(float(p.tier)):
 			return false
-		if station(p.kind) and p.tier!=0:
+		if deployable(p.kind) and p.tier!=0:
 			return false
 		if p.kind=="foundation" and p.level!=0 or p.kind in ["floor","roof"] and p.level==0:
 			return false
@@ -234,3 +260,100 @@ static func valid(data: Variant) -> bool:
 
 static func numeric(v: Variant, low: float, high: float) -> bool:
 	return (v is float or v is int) and is_finite(float(v)) and float(v)>=low and float(v)<=high
+
+func connected(id: String) -> Array:
+	var start: Dictionary = find(id)
+	if start.is_empty():
+		return []
+	var result: Array = [id]
+	var cursor: int = 0
+	while cursor<result.size():
+		var a: Dictionary = find(result[cursor])
+		for b in pieces:
+			if b.id in result or absf(float(a.y)-float(b.y))>0.05:
+				continue
+			var distance: int = absi(int(a.cell[0])-int(b.cell[0]))+absi(int(a.cell[1])-int(b.cell[1]))
+			if distance<=1:
+				result.append(b.id)
+		cursor += 1
+	return result
+
+func upkeep_cost(ids: Array) -> Dictionary:
+	var cost: Dictionary = {}
+	for p in pieces:
+		if p.id not in ids or deployable(p.kind):
+			continue
+		var material: String = "wood" if int(p.tier)<2 else "stone" if int(p.tier)==2 else "metal"
+		cost[material] = int(cost.get(material,0))+1
+	return cost
+
+func tick_upkeep(dt: float) -> void:
+	if upkeep_grace>0:
+		var used: float = minf(upkeep_grace,dt)
+		upkeep_grace -= used
+		dt -= used
+	upkeep_clock += minf(dt,300)
+	if upkeep_clock<300:
+		return
+	upkeep_clock -= 300
+	var examined: Array = []
+	var changed_any: bool = false
+	for root in pieces.duplicate():
+		if root.id in examined or find(root.id).is_empty():
+			continue
+		var ids: Array = connected(root.id)
+		examined.append_array(ids)
+		var costs: Dictionary = upkeep_cost(ids)
+		var cupboards: Array = []
+		for id in ids:
+			var p: Dictionary = find(id)
+			if p.kind=="cupboard":
+				var resources = Inventory.new(12)
+				resources.slots = p.inventory
+				cupboards.append(resources)
+		var paid: Dictionary = {}
+		for material in costs:
+			var available: int = 0
+			for resources in cupboards:
+				available += resources.count_item(material)
+			if available<int(costs[material]):
+				continue
+			var required: int = int(costs[material])
+			for resources in cupboards:
+				var amount: int = mini(required,resources.count_item(material))
+				resources.remove(material,amount)
+				required -= amount
+			paid[material] = true
+			changed_any = true
+		for id in ids:
+			var p: Dictionary = find(id)
+			if p.is_empty() or deployable(p.kind):
+				continue
+			var material: String = "wood" if int(p.tier)<2 else "stone" if int(p.tier)==2 else "metal"
+			if not paid.has(material):
+				# Single-player tuning; no offline decay. Nonempty collapse protection remains.
+				if strike(id,max_health(p)*[0.10,0.06,0.04,0.025][int(p.tier)]):
+					changed_any = true
+	if changed_any:
+		notify_changed()
+
+func bind_bag(id: String) -> bool:
+	var target: Dictionary = find(id)
+	if target.is_empty() or target.kind!="sleeping_bag":
+		return false
+	for p in pieces:
+		p.respawn = p.id==id
+	notify_changed()
+	return true
+
+func respawn_piece() -> Dictionary:
+	for p in pieces:
+		if p.kind=="sleeping_bag" and p.get("respawn",false):
+			return p
+	return {}
+
+func notify_changed() -> void:
+	dirty = true
+	if not batching:
+		dirty = false
+		changed.emit()

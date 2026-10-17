@@ -72,6 +72,23 @@ const fs = require('node:fs');
       await page.mouse.click(pointerX,pointerY);
       await page.waitForTimeout(400);
     }
+    async function durableSave() {
+      const previous=(await state()).saves;
+      await page.keyboard.press('F5');
+      await page.waitForFunction(n=>window.__soloSurvivalState.saves>n&&!window.__soloSurvivalState.save_pending&&window.__soloSurvivalState.persisted_generation===window.__soloSurvivalState.save_generation,previous,{timeout:30000});
+    }
+    async function approach(point) {
+      await aimAt([point[0],point[1]+1.65,point[2]-2]);
+      for(let step=0;step<8;step++){
+        const walking=await state();
+        if(walking.position[2]<point[2]+2.65)break;
+        await page.keyboard.down('KeyW');
+        await page.waitForFunction(z=>window.__soloSurvivalState.position[2]<z-0.15,walking.position[2],{timeout:12000});
+        await page.keyboard.up('KeyW');
+        await page.waitForTimeout(600);
+      }
+      assert.ok((await state()).position[2]>point[2]+0.9,'Leave deployable socket clear');
+    }
     async function attack() {
       await page.mouse.down(); await page.waitForTimeout(180); await page.mouse.up();
       await page.waitForTimeout(800);
@@ -136,18 +153,7 @@ const fs = require('node:fs');
     await attack();
     await page.waitForFunction(()=>window.__soloSurvivalState.structures===6);
     await page.keyboard.press('KeyB');
-    // Approach in observed short steps; leave space for the center deployable.
-    // Continuous hold + low software-renderer FPS can overshoot between reports.
-    await aimAt([baseCenter[0],baseCenter[1]+1.65,baseCenter[2]-2]);
-    for(let step=0;step<8;step++) {
-      const walking=await state();
-      if(walking.position[2]<baseCenter[2]+2.65) break;
-      await page.keyboard.down('KeyW');
-      await page.waitForFunction(z=>window.__soloSurvivalState.position[2]<z-0.15,walking.position[2],{timeout:12000});
-      await page.keyboard.up('KeyW');
-      await page.waitForTimeout(600);
-    }
-    assert.ok((await state()).position[2]>baseCenter[2]+0.9,'Leave the deployable socket clear');
+    await approach(baseCenter);
     await aimAt([baseCenter[0],baseCenter[1]+1.1,baseCenter[2]-1.5]);
     await page.keyboard.press('KeyE');
     await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.open));
@@ -158,6 +164,14 @@ const fs = require('node:fs');
     await page.keyboard.press('Digit3'); // crafted hammer is in slot 3
     await page.keyboard.press('KeyU');
     await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.tier===1));
+    // Damage and repair through the actual equipped tools.
+    await page.keyboard.press('Digit1');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.hp<250));
+    await page.waitForFunction(()=>window.__soloSurvivalState.attack_ready);
+    await page.keyboard.press('Digit3');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.hp===250));
     // Storage on this platform, keeping the player outside its collision box.
     await aimAt(baseCenter);
     await page.keyboard.press('KeyB'); await page.keyboard.press('Digit7');
@@ -184,6 +198,7 @@ const fs = require('node:fs');
     assert.ok(loaded.structure_data.some(p=>p.kind==='storage'&&p.inventory.some(s=>s.id==='ore'&&s.count===40)),'Stored inventory restores');
     assert.deepEqual(errors,[],'No construction/runtime errors');
     console.log('CONSTRUCTION_BROWSER_PASS '+JSON.stringify({structures:loaded.structures,fixtureVersion:fixture.version,doorTier:1,storedOre:40,savedPosition:built.position}));
+    if(process.env.HOSTED_CHECK==='true')return; // Local export runs the full processing/progression suite.
     await page.mouse.move(480,270); pointerX=480; pointerY=270;
     await page.keyboard.press('Enter');
     await page.waitForFunction(()=>window.__soloSurvivalState.playing);
@@ -243,6 +258,89 @@ const fs = require('node:fs');
     assert.ok(processed.structure_data.some(p=>p.kind==='furnace'&&p.inventory.some(s=>s.id==='cooked_berries')),'Cooked food survives transfer and save/reload');
     assert.deepEqual(errors,[],'No processing/runtime errors');
     console.log('PROCESSING_BROWSER_PASS '+JSON.stringify({structures:processed.structures,cooking:true,smelting:true,restore:true}));
+    // Schema-2 supplies isolate new deployable/progression coverage; no runtime mutation bridge.
+    const progression=JSON.parse(JSON.parse(fs.readFileSync('build/progression-fixture.json','utf8')).payload);
+    const nextChooser=page.waitForEvent('filechooser',{timeout:15000});
+    await clickUI('RESTORE SAVE BACKUP');
+    await (await nextChooser).setFiles('build/progression-fixture.json');
+    await page.waitForFunction(p=>window.__soloSurvivalState?.ready&&Math.abs(window.__soloSurvivalState.position[2]-p[2])<0.1,progression.position,{timeout:120000});
+    await page.mouse.move(480,270);pointerX=480;pointerY=270;
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>window.__soloSurvivalState.playing);
+    await page.keyboard.press('KeyB');await page.keyboard.press('Digit1');
+    await page.waitForFunction(()=>window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===1);
+    base=(await state()).structure_data[0];
+    const homeCenter=[base.cell[0]*3,base.y,base.cell[1]*3];
+    await aimAt(homeCenter);
+    await page.keyboard.press('Digit9');await page.keyboard.press('KeyG');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='cupboard'&&window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===2);
+    await page.keyboard.press('KeyB');
+    await approach(homeCenter);
+    await aimAt([homeCenter[0],homeCenter[1]+0.85,homeCenter[2]]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.station!=='');
+    await clickUI('DEPOSIT ALL THAT FITS');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='cupboard'&&p.inventory.some(s=>s.id==='metal'&&s.count===200)));
+    await durableSave();
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.__soloSurvivalState?.ready,null,{timeout:120000});
+    assert.ok((await state()).structure_data.some(p=>p.kind==='cupboard'&&p.inventory.some(s=>s.id==='metal'&&s.count===200)),'Upkeep contents survive reload');
+    await page.mouse.move(480,270);pointerX=480;pointerY=270;
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>window.__soloSurvivalState.playing);
+    await aimAt([homeCenter[0],homeCenter[1]+0.85,homeCenter[2]]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.station!=='');
+    await clickUI('TAKE ALL THAT FITS');
+    await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='hammer'));
+    await page.mouse.move(480,270);pointerX=480;pointerY=270;
+    await page.keyboard.press('Tab');
+    await aimAt([homeCenter[0],homeCenter[1]+0.85,homeCenter[2]]);
+    await page.keyboard.press('Digit3');await page.keyboard.press('KeyX');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===1);
+    await aimAt(homeCenter);
+    await page.keyboard.press('KeyB');await page.keyboard.press('Digit9');
+    await page.keyboard.press('KeyG');await page.keyboard.press('KeyG');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='sleeping_bag'&&window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===2);
+    await page.keyboard.press('KeyB');
+    await aimAt([homeCenter[0],homeCenter[1]+0.07,homeCenter[2]]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='sleeping_bag'&&p.respawn));
+    await durableSave();
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.__soloSurvivalState?.ready,null,{timeout:120000});
+    assert.ok((await state()).structure_data.some(p=>p.kind==='sleeping_bag'&&p.respawn),'Bound bag survives reload');
+    await page.mouse.move(480,270);pointerX=480;pointerY=270;
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>window.__soloSurvivalState.playing);
+    await aimAt([homeCenter[0],homeCenter[1]+0.07,homeCenter[2]]);
+    await page.keyboard.press('Digit3');await page.keyboard.press('KeyX');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===1);
+    await aimAt(homeCenter);
+    await page.keyboard.press('KeyB');await page.keyboard.press('Digit9');
+    for(let i=0;i<3;i++)await page.keyboard.press('KeyG');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='workbench'&&window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===2);
+    await page.keyboard.press('KeyB');
+    await aimAt([homeCenter[0],homeCenter[1]+0.5,homeCenter[2]]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.menu&&window.__soloSurvivalState.workbench_tier===1);
+    await clickUI('Metal pickaxe');
+    await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='metal_pickaxe'),null,{timeout:120000});
+    await durableSave();
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.__soloSurvivalState?.ready,null,{timeout:120000});
+    assert.ok((await state()).inventory.some(s=>s.id==='metal_pickaxe'&&s.condition===800),'Workbench crafted tool persists');
+    assert.deepEqual(errors,[],'No advanced building/progression runtime errors');
+    console.log('BASE_PROGRESSION_BROWSER_PASS '+JSON.stringify({schema1Import:true,schema2Import:true,cupboard:true,boundBag:true,benchTool:true}));
+
   } catch (error) {
     console.log('POINTER_EVENTS '+JSON.stringify(await page.evaluate(() => window.__pointerMoves).catch(() => null)));
     console.log('FAILURE_STATE '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState).catch(() => null)));

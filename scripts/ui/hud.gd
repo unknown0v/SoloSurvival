@@ -24,6 +24,8 @@ var queue_buttons: Array = []
 var message: Label
 var prompt: Label
 var clock: Label
+var respawn_button: Button
+var station_upkeep: Dictionary = {}
 var dead: PanelContainer
 var warning: Label
 var message_time: float = 0
@@ -129,9 +131,11 @@ func setup(owner_game) -> void:
 	dead.add_child(d)
 	d.add_child(label("YOU FELL",38,Color("#dec099")))
 	d.add_child(label("Your belongings remain at your last position.\nThe island continues.",17))
-	d.add_child(button("RETURN TO SHORE",game.respawn))
+	respawn_button = button("RETURN TO SHORE",game.respawn)
+	d.add_child(respawn_button)
 	dead.hide()
 	game.bag.changed.connect(refresh)
+	game.settlement.changed.connect(refresh_station_cost)
 	refresh()
 
 func build_title() -> void:
@@ -198,7 +202,7 @@ func build_inventory() -> void:
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(right)
 	right.add_child(label("CRAFTING",24,Color("#e2d4b2")))
-	right.add_child(label("Ingredients reserved on queue. Scroll for recipes.",13))
+	right.add_child(label("Ingredients reserved on queue. Bench recipes need a nearby workbench.",13))
 	for id in game.items.RECIPES:
 		var recipe: Dictionary = game.items.RECIPES[id]
 		var cost: String = ""
@@ -208,6 +212,8 @@ func build_inventory() -> void:
 		var recipe_id: String = str(id)
 		var recipe_button := button(text,func(): game.queue_craft(recipe_id))
 		recipe_button.custom_minimum_size.y = 54
+		if int(recipe.get("bench",0))>0:
+			recipe_button.text += " · WORKBENCH 1"
 		right.add_child(recipe_button)
 		recipe_buttons[id] = recipe_button
 	right.add_child(label("QUEUE / CLICK TO CANCEL AND REFUND",13,Color("#a6b59d")))
@@ -225,7 +231,7 @@ func build_inventory() -> void:
 	guide.name = "Building guide"
 	tabs.add_child(guide)
 	guide.add_child(label("BUILD YOUR SHORELINE HOME",24))
-	guide.add_child(label("Craft a building plan and hammer. Press B to build.\n1 foundation · 2 wall · 3 floor · 4 roof\n5 doorframe · 6 door · 7 storage · 8 fire · 9 furnace\nR rotates; green preview = valid; left click places.\n\nFoundations need dry, flat ground. Walls stand on\nfoundations/floors. Floors/roofs sit above walls.\nDoors fit doorframes; stations sit on platforms.\nAim at the supporting section to select its level.\n\nHammer selected: click repair · U upgrade · X dismantle.\nTwig → wood → stone → metal. Aim for costs/status.\nRemoving support collapses unsupported pieces.\nEmpty ALL affected containers before dismantling.\nNo demolition refund. Max 256 pieces, four storeys.\n\nE opens a station or toggles a door. Drag items between\nyour bag and its slots. Fire: 2 berries + 1 wood → ration.\nFurnace: 2 ore + 1 wood → metal. Start the station.\nOutputs wait when full; no offline processing.",16))
+	guide.add_child(label("Craft a building plan and hammer. Press B to build.\n1 foundation · 2 wall · 3 floor · 4 roof\n5 doorframe · 6 door · 7 storage · 8 fire · 9 furnace\nR rotates; green preview = valid; left click places.\n\nFoundations need dry, flat ground. Walls stand on\nfoundations/floors. Floors/roofs sit above walls.\nDoors fit doorframes; stations sit on platforms.\nAim at the supporting section to select its level.\n\nHammer selected: click repair · U upgrade · X dismantle.\nTwig → wood → stone → metal. Aim for costs/status.\nRemoving support collapses unsupported pieces.\nEmpty ALL affected containers before dismantling.\nNo demolition refund. Max 256 pieces, four storeys.\nG cycles cupboard, sleeping bag and workbench.\nBind a bag with E. A bench unlocks the metal pickaxe.\nCupboards consume upkeep every 5 simulated minutes.\nInitial new/migrated-world grace is 30 minutes.\n\nE opens a station or toggles a door. Drag items between\nyour bag and its slots. Fire: 2 berries + 1 wood → ration.\nFurnace: 2 ore + 1 wood → metal. Start the station.\nOutputs wait when full; no offline processing.",16))
 	station_panel = VBoxContainer.new()
 	station_panel.name = "Container"
 	tabs.add_child(station_panel)
@@ -258,15 +264,21 @@ func show_station(id: String) -> void:
 		station_grid.add_child(slot)
 		station_slots.append(slot)
 	tabs.current_tab = 2
+	refresh_station_cost()
 	refresh_station()
+
+func refresh_station_cost() -> void:
+	station_upkeep = game.settlement.upkeep_cost(game.settlement.connected(game.station_id))
 
 func refresh_station() -> void:
 	var p: Dictionary = game.settlement.find(game.station_id)
 	var available: bool = not p.is_empty()
 	station_title.text = p.kind.to_upper() if available else "AIM AT A STATION AND PRESS E"
 	station_grid.visible = available
-	station_toggle.visible = available and p.kind!="storage"
+	station_toggle.visible = available and p.kind in ["campfire","furnace"]
 	station_status.text = ("RUNNING" if p.active else "STOPPED")+" · "+str(snappedf(float(p.progress),0.1))+" s\n"+("2 berries + 1 wood → ration (5 s)" if p.kind=="campfire" else "2 ore + 1 wood → metal (8 s)" if p.kind=="furnace" else "12 slots · contents save with the world") if available else ""
+	if available and p.kind=="cupboard":
+		station_status.text = "UPKEEP / 5 MIN: "+str(station_upkeep)+"\nInitial grace: "+str(ceili(game.settlement.upkeep_grace))+" s. Connected base only; no offline decay."
 	for slot in station_slots:
 		slot.refresh()
 
@@ -281,12 +293,13 @@ func diagnostics() -> Dictionary:
 	return {"buttons":result,"size":[size.x,size.y]}
 
 func refresh() -> void:
+	var available_bench: int = game.workbench_tier()
 	if station_panel!=null:
 		refresh_station()
 	for slot in all_slots:
 		slot.refresh()
 	for id in recipe_buttons:
-		recipe_buttons[id].disabled = not game.bag.can_pay(game.items.RECIPES[id].cost) or game.crafts.jobs.size()>=8
+		recipe_buttons[id].disabled = not game.bag.can_pay(game.items.RECIPES[id].cost) or game.crafts.jobs.size()>=8 or available_bench<int(game.items.RECIPES[id].get("bench",0))
 	for i in range(queue_buttons.size()):
 		var b: Button = queue_buttons[i]
 		b.visible = i<game.crafts.jobs.size()
@@ -310,6 +323,7 @@ func _process(dt: float) -> void:
 	start_button.text = "RESUME  /  ENTER" if game.paused else "EMBARK  /  ENTER"
 	menu.visible = game.menu_open
 	dead.visible = float(game.stats.health)<=0
+	respawn_button.text = "RETURN TO SHORE" if game.settlement.respawn_piece().is_empty() else "RESPAWN AT YOUR SLEEPING BAG"
 	if dead.visible:
 		title.hide()
 		menu.hide()
