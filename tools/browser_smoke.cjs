@@ -1,10 +1,11 @@
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
 (async () => {
-  const browser = await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const browser = await chromium.launch({headless:false,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context = await browser.newContext({viewport:{width:960,height:540}});
   const page = await context.newPage();
   const errors = [];
+  await page.addInitScript(() => {window.__pointerMoves=[];window.addEventListener('pointermove',e=>{window.__pointerMoves.push({x:e.clientX,y:e.clientY,dx:e.movementX,dy:e.movementY,locked:!!document.pointerLockElement});if(window.__pointerMoves.length>8)window.__pointerMoves.shift();});});
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', msg => {
     const text = msg.text();
@@ -18,6 +19,7 @@ const assert = require('node:assert/strict');
     const bounds = await page.locator('#canvas').boundingBox();
     const center = {x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2};
     await page.mouse.move(center.x,center.y);
+    await page.waitForTimeout(500);
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.__soloSurvivalState.playing);
     await page.waitForTimeout(1800);
@@ -56,6 +58,7 @@ const assert = require('node:assert/strict');
     assert.deepEqual(errors,[],'No script/runtime errors');
     console.log('BROWSER_SMOKE_PASS '+JSON.stringify({before,after,saved,restored}));
   } catch (error) {
+    console.log('POINTER_EVENTS '+JSON.stringify(await page.evaluate(() => window.__pointerMoves).catch(() => null)));
     console.log('FAILURE_STATE '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState).catch(() => null)));
     const shot = await page.screenshot({type:'jpeg',quality:45});
     console.log('DIAGNOSTIC_SCREENSHOT_BASE64='+shot.toString('base64'));
