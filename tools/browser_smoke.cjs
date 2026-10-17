@@ -61,6 +61,7 @@ const fs = require('node:fs');
     let pointerX=480,pointerY=270;
     const state = () => page.evaluate(() => window.__soloSurvivalState);
     async function clickUI(prefix) {
+      await page.waitForFunction(prefix=>Object.keys(window.__soloSurvivalState?.ui?.buttons||{}).some(k=>k.startsWith(prefix)),prefix,{timeout:30000});
       const info = await page.evaluate(prefix => {
         const s=window.__soloSurvivalState;
         const key=Object.keys(s.ui.buttons).find(k=>k.startsWith(prefix));
