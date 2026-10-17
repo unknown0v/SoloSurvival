@@ -90,6 +90,10 @@ func _ready() -> void:
 	web_persistence.completed.connect(func(ok: bool, text: String):
 		if notify_browser_save or not ok:
 			say(text)
+		if not ok:
+			hud.warning.text = text
+		elif hud.warning.text.begins_with("Browser"):
+			hud.warning.text = ""
 		notify_browser_save = false
 	)
 	ready_to_play = true
@@ -166,7 +170,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"tree_hp":world.nodes["500"].state.hp,"tree_drawable":world.forest.resource_drawable("500"),"draw_calls":Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:

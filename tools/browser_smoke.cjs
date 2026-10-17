@@ -25,14 +25,11 @@ const fs = require('node:fs');
     await page.waitForFunction(() => window.__soloSurvivalState.playing);
     await page.waitForTimeout(1800);
     console.log('BEFORE_GATHER '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState)));
-    // The guaranteed tree is directly in front of the initial camera.
+    // Hold the actual mouse button until the guaranteed tree is fully harvested.
     await page.mouse.down();
-    await page.waitForTimeout(180);
+    await page.waitForFunction(()=>window.__soloSurvivalState.tree_hp===0,null,{timeout:90000});
     await page.mouse.up();
-    await page.waitForTimeout(900);
-    await page.mouse.down();
-    await page.waitForTimeout(180);
-    await page.mouse.up();
+    await page.waitForFunction(()=>window.__soloSurvivalState.tree_drawable===false);
     console.log('AFTER_GATHER '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState)));
     await page.waitForFunction(() => window.__soloSurvivalState.wood>0,null,{timeout:15000});
     const before = await page.evaluate(() => window.__soloSurvivalState);

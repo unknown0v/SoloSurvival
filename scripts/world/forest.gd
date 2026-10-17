@@ -3,6 +3,7 @@ extends Node3D
 var world
 var batches: Dictionary = {}
 var refs: Dictionary = {}
+var shown: Dictionary = {}
 var pending: Dictionary = {}
 
 func setup(owner_world) -> void:
@@ -16,6 +17,7 @@ func setup(owner_world) -> void:
 		var resource: Dictionary = world.nodes[id]
 		if resource.kind!="tree":
 			continue
+		shown[id] = float(resource.state.hp)>0
 		var body: Node3D = resource.body
 		var bucket: String = str(floori(body.position.x/160))+":"+str(floori(body.position.z/160))
 		var variant: int = int(id)%5
@@ -58,10 +60,16 @@ func hidden(transform: Transform3D) -> Transform3D:
 	return Transform3D(Basis.IDENTITY.scaled(Vector3.ZERO),transform.origin)
 
 func show_resource(id: String, visible_now: bool) -> void:
+	if refs.has(id):
+		shown[id] = visible_now
 	for entry in refs.get(id,[]):
 		entry.multi.set_instance_transform(entry.index,entry.transform if visible_now else hidden(entry.transform))
 
 func resource_visible(id: String) -> bool:
+	return bool(shown.get(id,false))
+
+# Full renderer readback is used by browser diagnostics, never as headless evidence.
+func resource_drawable(id: String) -> bool:
 	if not refs.has(id):
 		return false
 	var entry: Dictionary = refs[id][0]

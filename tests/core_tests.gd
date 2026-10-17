@@ -323,9 +323,9 @@ func run_tests() -> void:
 	browser_fixture(game)
 	check(game.world.forest.resource_visible("500"),"Batched starting tree is visible")
 	game.world.set_resource_visible("500",false)
-	check(not game.world.forest.resource_visible("500"),"Harvested tree hides every owned batch instance")
+	check(not game.world.forest.resource_visible("500"),"Visibility owner records depletion request")
 	game.world.set_resource_visible("500",true)
-	check(game.world.forest.resource_visible("500"),"Resource respawn restores owned batch instances")
+	check(game.world.forest.resource_visible("500"),"Visibility owner records respawn request")
 	check(game.world.forest.batches.size()<game.world.nodes.size(),"Forest is bounded into shared draw batches")
 	check(game.world.nodes.size()>100,"Real world generates resource nodes")
 	game.playing = true
