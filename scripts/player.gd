@@ -15,11 +15,15 @@ var bob: float = 0
 var current_item: String = ""
 var cooldown: float = 0
 var swimming: bool = false
+var movement_intent: Vector2 = Vector2.ZERO
+var sprinting: bool = false
 var target_info: Dictionary = {}
 
 func setup(owner_game, at: Vector3, yaw: float, look: float) -> void:
 	game = owner_game
 	floor_max_angle = deg_to_rad(48)
+	floor_snap_length = 0.25
+	floor_constant_speed = true
 	collision_layer = 2
 	collision_mask = 1
 	position = at
@@ -76,7 +80,7 @@ func _physics_process(dt: float) -> void:
 		return
 	update_model(dt)
 	if not game.playing or game.paused or float(game.stats.health)<=0:
-		velocity = Vector3.ZERO
+		reset_motion()
 		return
 	dt = minf(dt,0.1)
 	var blocked: bool = game.menu_open
@@ -102,15 +106,17 @@ func _physics_process(dt: float) -> void:
 		direction.x += 1
 	direction = (transform.basis*direction).normalized()
 	var sprint: bool = not blocked and Input.is_physical_key_pressed(KEY_SHIFT) and Input.is_physical_key_pressed(KEY_W) and not crouch
+	sprinting = sprint and direction.length_squared()>0.1
 	swimming = global_position.y < -0.7
 	var speed: float = 2.2 if swimming else 1.8 if crouch else 5.5 if sprint else 3.5
-	velocity.x = move_toward(velocity.x,direction.x*speed,dt*25)
-	velocity.z = move_toward(velocity.z,direction.z*speed,dt*25)
+	movement_intent = movement_intent.move_toward(Vector2(direction.x,direction.z)*speed,dt*25)
+	velocity.x = movement_intent.x
+	velocity.z = movement_intent.y
 	var grounded_before: bool = is_on_floor()
 	if swimming:
 		velocity.y = move_toward(velocity.y,2.4 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
 	elif is_on_floor():
-		velocity.y = 6 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else -2
+		velocity.y = 6 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0
 	else:
 		velocity.y -= 18*dt
 	var impact_speed: float = velocity.y
@@ -193,3 +199,9 @@ func update_model(dt: float) -> void:
 	swing = move_toward(swing,0,dt*3.2)
 	model.rotation = Vector3(sin(swing*PI)*-0.9,0,sin(swing*PI)*0.4)
 	model.position = Vector3(0.28+sin(bob)*0.008,-0.28+sin(bob*2)*0.006,-0.48)
+
+func reset_motion() -> void:
+	velocity = Vector3.ZERO
+	movement_intent = Vector2.ZERO
+	sprinting = false
+	target_info = {}

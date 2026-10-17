@@ -158,7 +158,7 @@ func _process(dt: float) -> void:
 		settlement.tick(dt)
 		hour = fmod(hour+dt*24.0/1800.0,24)
 		update_light()
-		tick_survival(dt,Vector2(player.velocity.x,player.velocity.z).length()>4.5,player.camera.global_position.y < -0.25)
+		tick_survival(dt,player.sprinting,player.camera.global_position.y < -0.25)
 		var output: String = crafts.tick(dt,bag)
 		if output!="":
 			say("Crafted "+str(items.ITEMS[output].name))
@@ -391,8 +391,7 @@ func respawn() -> void:
 	if bag.count_item("torch")==0:
 		bag.add("torch",1)
 	player.position = respawn_position()
-	player.update_target({})
-	player.velocity = Vector3.ZERO
+	player.reset_motion()
 	start_playing()
 	say("Your belongings remain where you fell.")
 	save_world(false)
