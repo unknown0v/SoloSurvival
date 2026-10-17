@@ -1,0 +1,65 @@
+name: Deploy validated Web preview to itch.io
+on:
+  workflow_dispatch:
+    inputs:
+      preview_tag:
+        description: "Validated preview release tag (preview- followed by 12 commit hex characters)"
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: itch-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check account configuration
+        env:
+          ITCHIO_TARGET: ${{ vars.ITCHIO_TARGET }}
+          ITCHIO_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
+          PREVIEW_TAG: ${{ inputs.preview_tag }}
+        run: |
+          test -n "$ITCHIO_TARGET" || { echo "Set ITCHIO_TARGET to the authorized username/game."; exit 1; }
+          test -n "$ITCHIO_API_KEY" || { echo "Add ITCHIO_API_KEY as a GitHub Actions secret; never paste it in chat."; exit 1; }
+          [[ "$PREVIEW_TAG" =~ ^preview-[0-9a-f]{12}$ ]] || exit 1
+          [[ "$ITCHIO_TARGET" =~ ^[a-z0-9_-]+/[a-z0-9_-]+$ ]] || exit 1
+      - name: Download already validated release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PREVIEW_TAG: ${{ inputs.preview_tag }}
+        run: |
+          mkdir -p build/web
+          gh release download "$PREVIEW_TAG" --pattern SoloSurvival-web.zip --dir build
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          root = Path("build/web").resolve()
+          with zipfile.ZipFile("build/SoloSurvival-web.zip") as archive:
+              files = archive.infolist()
+              assert len(files) <= 1000
+              assert sum(x.file_size for x in files) < 500_000_000
+              for entry in files:
+                  assert entry.file_size < 200_000_000
+                  assert len(entry.filename) <= 240
+                  assert Path(root / entry.filename).resolve().is_relative_to(root)
+              archive.extractall(root)
+          assert (root / "index.html").is_file()
+          PY
+      - name: Install official butler in ephemeral cloud runner
+        run: |
+          curl --fail --location --retry 3 "https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default" --output "$RUNNER_TEMP/butler.zip"
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          "$RUNNER_TEMP/butler/butler" version
+      - name: Upload authorized HTML5 channel
+        env:
+          BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
+          ITCHIO_TARGET: ${{ vars.ITCHIO_TARGET }}
+          PREVIEW_TAG: ${{ inputs.preview_tag }}
+        run: |
+          "$RUNNER_TEMP/butler/butler" push build/web "$ITCHIO_TARGET:html5" --userversion "$PREVIEW_TAG"
+          echo "Uploaded HTML5 channel. The itch.io owner must set the page kind to HTML and mark the channel playable in browser after the first upload."

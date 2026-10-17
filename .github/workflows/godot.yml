@@ -1,0 +1,103 @@
+name: Godot validate and export
+on:
+  push:
+    branches: [main, codex/godot-first-playable]
+    paths-ignore: ["**/*.md"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["**/*.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: godot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  milestone:
+    # Public standard Linux runners are free. Fail closed if visibility changes.
+    if: github.event.repository.private == false && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.head.ref != 'codex/godot-first-playable')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check browser harness syntax
+        run: |
+          node --check tools/browser_smoke.cjs
+          node --check scripts/web/persistence.js
+          node tests/web_persistence.cjs
+      - name: Install checksum-pinned Godot in ephemeral cloud runner
+        run: python3 tools/setup_godot.py
+      - name: Stamp the compiled payload source
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          commit = os.environ["GITHUB_SHA"]
+          assert re.fullmatch(r"[0-9a-f]{40}", commit)
+          Path("scripts/build_info.gd").write_text("extends RefCounted" + chr(10) + "const SOURCE: String = " + json.dumps(commit) + chr(10), encoding="utf-8")
+          PY
+      - name: Import and compile scripts
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --editor --path . --import --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:|Failed to load script' /tmp/godot-import.log; then exit 1; fi
+      - name: Domain and real-scene headless tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --verbose --path . --script res://tests/core_tests.gd 2>&1 | tee /tmp/godot-tests.log
+          grep 'SOLOSURVIVAL_TESTS' /tmp/godot-tests.log
+          if grep -E 'SCRIPT ERROR:|Parse Error:' /tmp/godot-tests.log; then exit 1; fi
+      - name: Export Web and Windows with official templates
+        run: |
+          mkdir -p build/web build/windows
+          godot --headless --path . --export-release Web build/web/index.html
+          godot --headless --path . --export-release Windows build/windows/SoloSurvival.exe
+          python3 tools/check_web_export.py
+      - name: Install browser test tooling in cloud runner
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser" --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/browser/node_modules/.bin/playwright" install chromium --with-deps
+      - name: Actual browser runtime smoke test using software WebGL
+        shell: bash
+        run: |
+          python3 -m http.server 8060 --bind 127.0.0.1 --directory build/web > /tmp/web-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs
+      - name: Write validation summary
+        run: |
+          echo "### SoloSurvival validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "Godot 4.7.2: imported; domain + real-scene headless tests; Web + Windows exported; Chromium software-WebGL startup, gathering, movement, save/reload checks passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "No human playtest or laptop performance claim. Validated branch builds are published as free GitHub release assets. No Actions artifact or cache storage is used." >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish build downloads without Actions artifact or cache storage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="preview-${GITHUB_SHA:0:12}"
+          if gh release view "$tag" --json targetCommitish >/tmp/preview-release.json 2>/dev/null; then
+            target="$(python3 -c 'import json; print(json.load(open("/tmp/preview-release.json"))["targetCommitish"])')"
+            test "$target" = "$GITHUB_SHA" || { echo "Existing preview belongs to another commit; left untouched."; exit 1; }
+            echo "This source commit already has an immutable preview; preserving its assets."
+          else
+            gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png build/construction-smoke.png build/processing-smoke.png build/stairs-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival construction preview (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
+          fi
+
+      - name: Publish validated browser build to free GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/publish_web.py
+
+      - name: Verify the actual hosted game after Pages deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
+        shell: bash
+        run: |
+          python3 tools/check_hosted.py
+          GAME_URL="$(cat build/hosted-url.txt)" HOSTED_CHECK=true NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs
