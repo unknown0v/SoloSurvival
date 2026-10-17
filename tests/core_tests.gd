@@ -81,6 +81,9 @@ func domain_tests() -> void:
 	check(math.height(-150,-155)>1,"Starting shore is above water")
 	check(math.height(319,319)<0,"Island edges are underwater")
 	check(is_equal_approx(math.height(20,30),WorldMath.new().height(20,30)),"World is deterministic")
+	check(is_equal_approx(math.height(20,32),math.raw_height(20,32)),"Original terrain vertices and seed preserved")
+	var expected: float = math.raw_height(20,32)*0.5+math.raw_height(24,32)*0.25+math.raw_height(20,36)*0.25
+	check(is_equal_approx(math.height(21,33),expected),"Surface query follows actual collision triangle")
 
 func construction_tests() -> void:
 	var model = Settlement.new()
@@ -262,6 +265,9 @@ func construction_scene_tests(game) -> void:
 	game.buildings.build_kind = "foundation"
 	game.buildings.edge = 0
 	game.buildings.update_candidate()
+	var camera: Camera3D = game.player.camera
+	var ray := PhysicsRayQueryParameters3D.create(camera.global_position,camera.global_position-camera.global_basis.z*12,1)
+	print("CAMERA_DIAGNOSTIC from="+str(camera.global_position)+" direction="+str(-camera.global_basis.z)+" long_hit="+str(game.get_world_3d().direct_space_state.intersect_ray(ray)))
 	print("PLACEMENT_DIAGNOSTIC candidate="+str(game.buildings.candidate)+" reason="+game.buildings.placement_reason+" player="+str(game.player.position)+" pitch="+str(game.player.pitch))
 	check(game.buildings.placement_reason=="","Real terrain ray produces valid foundation preview")
 	check(game.buildings.place(),"Real-world foundation placement succeeds")
