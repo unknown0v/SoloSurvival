@@ -19,7 +19,7 @@ static func position_valid(pos: Variant) -> bool:
 static func validate(data: Variant) -> String:
 	if not data is Dictionary:
 		return "Save payload must be an object."
-	if data.get("version") not in [1,2] or data.get("seed") != 197403:
+	if (data.get("version") != 1 and data.get("version") != 2) or data.get("seed") != 197403:
 		return "Unsupported world version or seed."
 	if not position_valid(data.get("position")) or not number(data.get("yaw"),-100000,100000) or not number(data.get("pitch"),-1.5,1.5):
 		return "Invalid player transform."
@@ -75,7 +75,7 @@ static func unwrap(text: String) -> Dictionary:
 	var data: Variant = inner.data
 	var error: String = validate(data)
 	if error != "":
-		return {"error":error, "unsupported":data is Dictionary and (data.get("version") != 1 or data.get("seed") != 197403)}
+		return {"error":error, "unsupported":data is Dictionary and ((data.get("version") != 1 and data.get("version") != 2) or data.get("seed") != 197403)}
 	return {"data":data}
 
 func read_file(filename: String) -> Dictionary:

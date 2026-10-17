@@ -17,7 +17,7 @@ static func station(kind: String) -> bool:
 	return kind in ["storage","campfire","furnace"]
 
 static func same_cell(a: Dictionary, b: Dictionary) -> bool:
-	return a.cell == b.cell and absf(float(a.y)-float(b.y))<0.05
+	return int(a.cell[0])==int(b.cell[0]) and int(a.cell[1])==int(b.cell[1]) and absf(float(a.y)-float(b.y))<0.05
 
 static func horizontal(kind: String) -> bool:
 	return kind in ["foundation","floor","roof"]
@@ -46,7 +46,7 @@ func at_socket(candidate: Dictionary) -> Dictionary:
 		if p.kind not in ["wall","doorframe"] or candidate.kind not in ["wall","doorframe"]:
 			continue
 		var step: Vector2i = edge_step(int(candidate.edge))
-		if p.cell==[int(candidate.cell[0])+step.x,int(candidate.cell[1])+step.y] and p.edge==(int(candidate.edge)+2)%4 and p.level==candidate.level and absf(float(p.y)-float(candidate.y))<0.05:
+		if int(p.cell[0])==int(candidate.cell[0])+step.x and int(p.cell[1])==int(candidate.cell[1])+step.y and p.edge==(int(candidate.edge)+2)%4 and p.level==candidate.level and absf(float(p.y)-float(candidate.y))<0.05:
 			return p
 	return {}
 

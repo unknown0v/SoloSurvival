@@ -1,5 +1,6 @@
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 (async () => {
   const browser = await chromium.launch({headless:false,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const context = await browser.newContext({viewport:{width:960,height:540}});
@@ -56,7 +57,105 @@ const assert = require('node:assert/strict');
     assert.ok(restored.wood>=saved.wood,'Inventory restored across browser reload');
     assert.ok(Math.abs(restored.position[0]-saved.position[0])<0.5,'Position restored across browser reload');
     assert.deepEqual(errors,[],'No script/runtime errors');
-    console.log('BROWSER_SMOKE_PASS '+JSON.stringify({before,after,saved,restored}));
+    console.log('BROWSER_SMOKE_PASS '+JSON.stringify({wood:saved.wood,savedPosition:saved.position,restoredPosition:restored.position}));
+    const state = () => page.evaluate(() => window.__soloSurvivalState);
+    async function clickUI(prefix) {
+      const info = await page.evaluate(prefix => {
+        const s=window.__soloSurvivalState;
+        const key=Object.keys(s.ui.buttons).find(k=>k.startsWith(prefix));
+        return key ? {point:s.ui.buttons[key],size:s.ui.size,key} : null;
+      },prefix);
+      assert.ok(info,'Visible UI button: '+prefix);
+      const canvas=await page.locator('#canvas').boundingBox();
+      await page.mouse.click(canvas.x+info.point[0]/info.size[0]*canvas.width,canvas.y+info.point[1]/info.size[1]*canvas.height);
+      await page.waitForTimeout(400);
+    }
+    async function attack() {
+      await page.mouse.down(); await page.waitForTimeout(180); await page.mouse.up();
+      await page.waitForTimeout(800);
+    }
+    async function aimAt(point) {
+      const s=await state();
+      const dx=point[0]-s.position[0],dy=point[1]-(s.position[1]+1.65),dz=point[2]-s.position[2];
+      const yaw=Math.atan2(-dx,-dz),pitch=Math.atan2(dy,Math.hypot(dx,dz));
+      const delta=((yaw-s.yaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+      await page.mouse.move(480-delta/0.002,270-(pitch-s.pitch)/0.002,{steps:4});
+      await page.waitForTimeout(700);
+    }
+    // A valid M1 item/save fixture is imported through the shipped file-picker UI.
+    // No game mutation command or test-only runtime bridge is used.
+    const fixture=JSON.parse(JSON.parse(fs.readFileSync('build/milestone1-fixture.json','utf8')).payload);
+    const chooserPromise=page.waitForEvent('filechooser',{timeout:15000});
+    await clickUI('RESTORE SAVE BACKUP');
+    await (await chooserPromise).setFiles('build/milestone1-fixture.json');
+    await page.waitForFunction(p => window.__soloSurvivalState?.ready && Math.abs(window.__soloSurvivalState.position[0]-p[0])<0.1 && Math.abs(window.__soloSurvivalState.position[2]-p[2])<0.1,fixture.position,{timeout:120000});
+    await page.mouse.move(480,270);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(()=>window.__soloSurvivalState.playing);
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(()=>window.__soloSurvivalState.menu);
+    await clickUI('Building plan');
+    await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='building_plan'),null,{timeout:30000});
+    await clickUI('Building hammer');
+    await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='hammer'),null,{timeout:45000});
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(()=>!window.__soloSurvivalState.menu);
+    await page.keyboard.press('KeyB');
+    await page.keyboard.press('Digit1');
+    await page.waitForFunction(()=>window.__soloSurvivalState.building && window.__soloSurvivalState.placement==='',null,{timeout:15000});
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===1);
+    let base=(await state()).structure_data.find(p=>p.kind==='foundation');
+    const center=[base.cell[0]*3,base.y,base.cell[1]*3];
+    await aimAt(center);
+    await page.keyboard.press('Digit5');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='doorframe' && window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===2);
+    await page.keyboard.press('Digit6');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='door' && window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===3);
+    await page.keyboard.press('KeyB');
+    // Jump onto the foundation using actual keys, then operate and upgrade its door.
+    await aimAt([center[0],center[1]+1.65,center[2]-2]);
+    await page.keyboard.down('KeyW'); await page.keyboard.down('Space');
+    await page.waitForFunction(z=>window.__soloSurvivalState.position[2]<z+1.35,center[2],{timeout:15000});
+    await page.keyboard.up('KeyW'); await page.keyboard.up('Space');
+    await page.waitForTimeout(700);
+    await aimAt([center[0],center[1]+1.1,center[2]-1.5]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.open));
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&!p.open));
+    await page.keyboard.press('Digit3'); // crafted hammer is in slot 3
+    await page.keyboard.press('KeyU');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.tier===1));
+    // Storage on this platform, keeping the player outside its collision box.
+    await aimAt(center);
+    await page.keyboard.press('KeyB'); await page.keyboard.press('Digit7');
+    await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='storage' && window.__soloSurvivalState.placement==='');
+    await attack();
+    await page.waitForFunction(()=>window.__soloSurvivalState.structures===4);
+    await page.keyboard.press('KeyB');
+    await aimAt([center[0],center[1]+0.38,center[2]]);
+    await page.keyboard.press('KeyE');
+    await page.waitForFunction(()=>window.__soloSurvivalState.station!=='');
+    await clickUI('DEPOSIT ALL THAT FITS');
+    await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='storage' && p.inventory.some(s=>s.id==='ore'&&s.count===40)));
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('F5');
+    await page.waitForTimeout(500);
+    const built=await state();
+    await page.screenshot({path:'build/construction-smoke.png'});
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.__soloSurvivalState?.ready,null,{timeout:120000});
+    const loaded=await state();
+    assert.equal(loaded.structures,4,'Constructed shelter and storage restore');
+    assert.ok(loaded.structure_data.some(p=>p.kind==='door'&&p.tier===1&&!p.open),'Door tier/state restore');
+    assert.ok(loaded.structure_data.some(p=>p.kind==='storage'&&p.inventory.some(s=>s.id==='ore'&&s.count===40)),'Stored inventory restores');
+    assert.deepEqual(errors,[],'No construction/runtime errors');
+    console.log('CONSTRUCTION_BROWSER_PASS '+JSON.stringify({structures:loaded.structures,fixtureVersion:fixture.version,doorTier:1,storedOre:40,savedPosition:built.position}));
   } catch (error) {
     console.log('POINTER_EVENTS '+JSON.stringify(await page.evaluate(() => window.__pointerMoves).catch(() => null)));
     console.log('FAILURE_STATE '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState).catch(() => null)));

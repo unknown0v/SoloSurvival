@@ -197,12 +197,13 @@ func browser_fixture(game) -> void:
 			var data: Dictionary = fixture()
 			var inv = Inventory.new(36)
 			inv.add("rock",1)
-			inv.add("building_plan",1)
-			inv.add("hammer",1)
 			inv.add("wood",1000)
 			inv.add("stone",1000)
 			inv.add("ore",40)
 			inv.add("berries",20)
+			for index in range(1,5):
+				inv.slots[index+5] = inv.slots[index]
+				inv.slots[index] = {}
 			data.inventory = inv.slots
 			data.position = [wx,math.height(wx,wz+4.3)+0.05,wz+4.3]
 			data.pitch = -atan2(float(data.position[1])+1.65-y,4.3)
