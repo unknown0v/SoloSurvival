@@ -1,25 +1,22 @@
 # Independent gameplay comparison
 
-No Rust binaries, proprietary assets, source or protected data were copied/analyzed. No direct reference gameplay timing study has yet been performed; comparisons below are broad design goals, not verified parity. Future entries must cite observed public gameplay or official documentation, observation date and measurable differences.
+No Rust source, proprietary assets or protected binary data were copied or analyzed. No direct gameplay timing study has been performed. The following are broad design comparisons, not verified parity. Future claims need dated observations and sources.
 
-| System | SoloSurvival observed baseline / implementation | Difference / next verification |
+| System | Verified SoloSurvival behavior | Material differences / gaps |
 |---|---|---|
-| World | One deterministic 640 m island; original procedural art | Smaller, simplified terrain/assets; not Rust visuals |
-| Controls | Mouse look, walking/sprint/crouch/jump/swim | Independent speeds/tuning; no measured Rust camera/movement match |
-| Gathering/crafting | Rock/tools, stacks, six-slot bar, timed reserved recipes | Limited item set, independent yields/costs/timing |
-| Survival | Health, food/water, fall/drowning, death/recovery | Temperature, bleeding, radiation and equipment still future |
-| Construction | M2 source adds 3 m square sockets, tiers/support/repair/damage | 95-assertion suite and exported/public browser construction passed; no triangle/window/stair/decay/upkeep/armored implementation yet |
-| Processing | M2 source adds storage, berries cooking and ore smelting | Exported/public browser cooking/smelting and reload passed; simplified fuel batches, no hunting/meat/bench progression yet |
-| Combat/PvE | No integrated weapons/AI/monuments | All required before 1.0 |
-| Persistence | Baseline browser save/reload verified | M2 schema-1 import, building/storage/station reload and durable IndexedDB confirmation browser verified |
-| Native | Windows x64 export produced | Native Windows runtime not verified |
+| World | One deterministic 640 m 3D island, resources and day/night | Smaller/simplified terrain and procedural art; no monuments or populated PvE yet |
+| Controls | Mouse look and movement; real physics tests include floor, fall, stairs and bed spawn | Independent speed/camera/swim tuning; no measured Rust movement match |
+| Inventory/crafting | Six-slot hotbar, stacks, transfers, reserved/timed queue and bench-gated metal tool | Equipment, instance metadata, drops, weapons and research remain |
+| Construction | Square sockets, full/half walls/windows, floors/roof, frame/door, stairs/landings, four material tiers, support/repair/damage | No triangles, armored tier, locks, practical double doors or defenses; independent costs/health/stability |
+| Processing | Capacity-safe berry cooking and ore smelting, storage, persistent station state | No hunting/meat or advanced industrial chains yet |
+| Upkeep | Connected cupboards pool material, material-specific protection, grace and simulated-time decay | Independent solo costs/rates; no offline decay; stored-item protection can prevent final collapse |
+| Respawn | One bound bag/bed; collision queries choose a clear nearby point | Independent binding/placement rules and timing; no measured Rust cooldown parity |
+| Survival | Health/food/water, fall/drowning, death/recovery | Bleeding, temperature, radiation, equipment/armor and fuller balance remain |
+| Combat/PvE/progression | Gathering tools and base damage exist | Weapons, wildlife, NPCs, monuments/loot and advanced progression unimplemented |
+| Persistence | Schemas 1–4, backup recovery, durable browser confirmation; actual reload checks | Windows runtime/cross-browser/human coverage still open |
+| Graphics/audio | Original procedural geometry/materials/impact sound, batch rendering | Substantially below Rust visual/audio fidelity; major art/animation/weather/audio work remains |
 
-Never replace unmeasured comparisons with claims of Rust parity. Refresh entries after each validated increment.
+Verified source `4f07a3bd5d20a8b5bfc87d9553010209b958694a`, [run 39048713145](https://github.com/unknown0v/SoloSurvival/actions/runs/39048713145). Exported and hosted browser coverage differ; see DEVELOPMENT_STATUS.md. No 1.0 or Rust-equivalence claim.
 
-## Documented references inspected 2026-10-17
-
-[Facepunch tool cupboard, decay and building privilege](https://wiki.facepunch.com/rust/the_tool_cupboard) documents upkeep preventing building decay. This informs planned single-player upkeep; multiplayer building privileges are outside scope. No numerical timing or stability parity is established by this reference, and SoloSurvival upkeep is not yet implemented.
-
-Current base-progression increment (pending validation): cupboard protection follows connected cells and material-specific costs, with pooled cupboard inventory, independent rates and a 30-minute initial grace. No offline decay. Sleeping bags bind solo respawn; nearby workbenches gate a metal tool. These are independent approximations, not verified Rust timing, geometry or progression parity.
-
-Verified base progression (`46232e96790ab03daf41d79b22b53e32bf494b33`): material upkeep/decay and safe respawn were covered headlessly; exported Chromium exercised cupboard storage, bound bag persistence and bench-gated tool crafting. Hosted checks covered core construction/storage. Rates, costs and geometry are independent solo tuning. Half walls/windows/stairs/beds are the current unverified extension.
+## Documented reference inspected 2026-10-17
+[Facepunch: tool cupboard, decay and building privilege](https://wiki.facepunch.com/rust/the_tool_cupboard) documents connected-building upkeep and material-specific protection. SoloSurvival uses this as a qualitative design reference with independent solo tuning; multiplayer privilege is out of scope. That documentation does not establish numerical parity or measured live gameplay.

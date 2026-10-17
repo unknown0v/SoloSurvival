@@ -18,3 +18,5 @@ https://itch.io/docs/creators/html5
 https://itch.io/docs/butler/installing.html  
 https://itch.io/docs/butler/pushing.html  
 https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site
+
+The current pipeline verifies both the deployed manifest and a source SHA compiled into the game payload. Full exported-browser integration includes processing/progression/stairs; the hosted repeat covers core gameplay, building/repair/storage and durable reload. Markdown-only documentation updates skip expensive exports and preserve the last verified payload.

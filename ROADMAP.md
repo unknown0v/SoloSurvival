@@ -1,29 +1,28 @@
-# SoloSurvival roadmap
+# SoloSurvival roadmap to 1.0
 
-The owner authorizes continuous development through version 1.0 during available execution. No milestone requires another ordinary approval. Read DEVELOPMENT_STATUS.md for actual progress; unchecked work is not implemented by this roadmap.
+The owner authorizes continuous development during available execution; ordinary next phases need no new approval. Exactly one human, one persistent island, Godot 4/GDScript, Web and offline Windows, $0 additional infrastructure. No prototype is to be labeled 1.0.
 
-- [x] M1: persistent island, first-person controls, resources, inventory, basic crafting, survival, day/night, death, saves, Web/Windows cloud exports.
-- [x] M2: validate square foundations/walls/floors/roofs/frames/doors, preview/snapping, tiers/repair/damage/support, storage, cooking and smelting.
-- [ ] Phase A completion: triangle pieces, half walls, windows, stairs, practical double doors, armored tier, decay/cupboard upkeep, sleeping bags/beds, locks, workbenches and basic defenses.
-- [ ] Phase B: bleeding, temperature/biome exposure, radiation, clothing/armor, food/water/healing balance and meaningful recovery.
-- [ ] Phase C: equipment, quick transfers, dropped items, loot, bench-gated recipes, expanded item/recipe content and conservation regressions.
-- [ ] Phase D: reusable damage/projectile/ammo/armor systems; spears/bows/crossbow, distinct firearms, reload/recoil/aim/durability/audio, game explosives.
-- [ ] Phase E: deer/boar/wolf/bear finite-state AI, harvestable corpses, hostile patrol NPCs, detection/combat/loot/respawn and distance scheduling.
-- [ ] Phase F: improve same seeded island, roads/paths/lake/cliffs and wildlife habitats; meaningful gas station, supermarket, harbor, military and industrial areas with hazards/loot.
-- [ ] Phase G: workbench tiers, scrap, research/blueprints, recycling and risk/reward PvE progression.
-- [ ] Phase H: replace procedural placeholders progressively, improve original/licensed terrain/vegetation/PBR/water/atmosphere/weather/animation.
-- [ ] Phase I: original/licensed spatial ambience, footsteps, combat/building/station/UI audio.
-- [ ] Phase J: new/continue/settings, configurable input/graphics/audio, equipment/loot/workbench/map/status/respawn UI.
-- [ ] Phase K: persistence for every integrated system, migrations, autosave/manual save/import/export/corruption/backup regressions.
-- [ ] Phase L: measure bottlenecks, batching/LOD/culling/AI scheduling; browser quality profile and suitable native enhancements.
-- [ ] Phase M: complete gameplay acceptance walkthrough, regression fixes, browser validation, Windows runtime verification and human review.
-- [ ] Phase N: only after RELEASE_CHECKLIST.md passes, tag 1.0.0 with source, offline Windows build, Web build, licenses, release notes and honest limitations.
+## Verified foundation
+- [x] M1: island, first-person controls, resources, inventory/hotbar, basic crafting, survival, day/night, death/recovery, saves and cloud exports.
+- [x] M2: plan, foundations/walls/floors/roofs/frames/doors, snapping/previews/rotation, tiers, repair/damage/support, storage, cooking and smelting.
+- [x] Phase A extensions: half walls, window frames, stairs/upper landings, beds/bags, upkeep cupboards and basic workbench/metal tool.
+- [x] Supporting work: terrain-surface agreement, stable target ownership, regional tree batches, durable browser save confirmation and schemas 1–4.
+- Evidence: source `4f07a3bd5d20a8b5bfc87d9553010209b958694a`, [run 39048713145](https://github.com/unknown0v/SoloSurvival/actions/runs/39048713145), 145 Godot assertions, five JS cases, both exports, exported-browser integration and hosted core/construction/storage checks.
 
-Dependencies: construction → processing/benches → weapons/armor → wildlife/NPCs → monuments/progression. Survival, persistence, UI, assets and performance evolve with each playable increment. Preserve one island/seed and all validated releases.
+## Remaining phases
+- [ ] A completion: triangle foundations/floors, practical double doors, armored tier, locks and basic defenses. Extend the pose contract without shifting saved square pieces. Item metadata/drop ownership precedes keys/locks and destructive loot.
+- [ ] B survival: bleeding, cold/heat/biomes, radiation, recovery, clothing/armor and solo balance. Preserve existing fall/drowning/deprivation behavior.
+- [ ] C inventory/crafting: equipment slots, instance metadata, quick transfer, dropped items/loot, expanded recipes and bench requirements; conservation and save regressions.
+- [ ] D combat: reusable damage/projectile/armor/ammo, spears, bow/crossbow, distinct primitive firearm/pistol/revolver/shotgun/rifle/automatic/game explosives; equip/aim/reload/recoil/durability/animation/effects/audio.
+- [ ] E AI: deer/boar/wolf/bear states, hunting/harvestable corpses; hostile patrol NPC vision/hearing/pursuit/combat/loot/respawn and distance scheduling.
+- [ ] F island content: preserve same seed/map; improve biomes, cliffs/lake/roads/paths/habitats; meaningful gas station, supermarket, harbor, military and industrial locations with hazards and loot.
+- [ ] G progression: workbench tiers, scrap, research/blueprints, recycling, advanced gear and risk/reward PvE objectives.
+- [ ] H visuals: replace major placeholder geometry progressively, improve terrain/vegetation/PBR/water/sky/clouds/weather/lighting/animation; original/licensed assets with ledger.
+- [ ] I audio: spatial forest/ocean/river/wind/rain/night, footsteps/surfaces, gathering, handling/combat, animals/NPCs, building/stations/UI.
+- [ ] J UI: functional new/continue/settings, sensitivity/controls/graphics/audio, equipment/loot/workbench/map/status/respawn interfaces.
+- [ ] K persistence: migrate and save every integrated system; autosave/manual/import/export/integrity/recovery; never silently reset.
+- [ ] L performance: measure actual bottlenecks, improve culling/LOD/batching/AI/pooling/load/memory; low browser and suitable enhanced native profiles. Hardware 1080p/60 FPS target remains unverified.
+- [ ] M acceptance: execute the complete 30-step walkthrough, regressions and browser coverage, native Windows runtime and offline testing, human review and major bug fixes.
+- [ ] N release: only after RELEASE_CHECKLIST.md passes, publish 1.0.0 source/builds/notices/release notes and known limitations.
 
-M2 validation: source `b30937aefd4b0702c036603df3eb4e8af5471325`, [run 39044434999](https://github.com/unknown0v/SoloSurvival/actions/runs/39044434999), 95 headless assertions, both exports, exported/public browser construction and processing save/reload. Regional tree batching and fuller browser shelter checks are the active follow-up; this does not complete Phase A.
-
-Rendering follow-up verified: source `be72860fe4ef25f6171bd553bfa9356cd394a677`, run 39045492002; 100 headless assertions, five confirmation cases and full exported/public browser building/processing reload. Active: cupboard upkeep, bound sleeping bag, basic workbench and metal tool; schema-3 migration and browser tests pending.
-
-- [x] Basic cupboard upkeep/decay, bound sleeping bags and workbench-gated metal tool: `46232e96790ab03daf41d79b22b53e32bf494b33`, run 39046908209; scope above and in status.
-- [ ] Active construction extension: half walls, window frames, stairs/upper landings and beds, with schema-4 migration/validation.
+Dependency order: construction/processing → equipment/ownership/benches → combat → AI → monuments/research; persistence, UI, assets and performance evolve with each tested increment. Keep a playable preview and immutable releases throughout.

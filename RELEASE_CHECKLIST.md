@@ -1,25 +1,26 @@
 # Version 1.0 release gates
 
-This project is an early playable work in progress, not version 1.0.
+This is an early playable preview, not 1.0. Evidence for the latest gameplay checkpoint: source `4f07a3bd5d20a8b5bfc87d9553010209b958694a`, [run 39048713145](https://github.com/unknown0v/SoloSurvival/actions/runs/39048713145).
 
-- [x] Godot source and cloud build toolchain exist.
-- [x] First milestone browser runtime and save/reload verified.
-- [x] Windows x64 export exists (unsigned; export is not a runtime test).
-- [x] Milestone 2 construction/processing cloud and exported/public browser integration verified (fixture-assisted; full-game acceptance remains open).
-- [ ] Expanded construction, deployables, upkeep and repair/damage complete.
-- [ ] Survival hazards, recovery and equipment integrated.
-- [ ] Weapons, ammo, reload/recoil, hit/armor/projectile systems integrated.
-- [ ] Wildlife, hunting, hostile NPCs and loot integrated.
-- [ ] Meaningful monuments, research and long-term progression integrated.
-- [ ] Complete 30-step owner gameplay acceptance test executed and evidence recorded.
-- [ ] All persistence/migration/corruption regressions pass after final changes.
-- [ ] Functional polished settings/menu/map/equipment/loot UI.
-- [ ] Major placeholder art replaced; assets/audio original or licensed and tracked.
-- [ ] Representative hardware performance measured; limitations documented.
-- [ ] Native Windows runtime tested; offline normal gameplay verified.
-- [ ] Human playtest/review completed; major bugs resolved.
-- [ ] Final Web gameplay verified; cross-browser coverage documented.
-- [ ] Final licenses, notices, source, release notes and known limitations audited.
+- [x] Real Godot source, cloud-only pinned toolchain and playable public browser build.
+- [x] M1 survival/gathering/inventory/crafting/persistence integrated.
+- [x] M2 square construction, tiers/support/repair/damage, storage/cooking/smelting integrated and browser tested.
+- [x] Upkeep cupboard, bound bag/bed, basic workbench/metal tool, half walls/windows/stairs integrated with declared validation.
+- [x] 145 Godot assertions and five JS cases pass; both exports and actual exported/hosted browser checks pass.
+- [x] Native Windows x64 export exists; unsigned and not runtime verified.
+- [ ] Remaining construction/armored/locks/defenses complete.
+- [ ] Equipment, survival hazards and recovery integrated.
+- [ ] Weapons/ammo/combat/armor/projectiles integrated.
+- [ ] Wildlife/hunting, hostile NPCs and loot integrated.
+- [ ] Meaningful monuments, research/recycling and long-term progression integrated.
+- [ ] Complete 30-step human gameplay acceptance walkthrough executed with evidence.
+- [ ] Every final persistence/migration/corruption regression passes.
+- [ ] Functional polished menu/settings/map/equipment/loot UI and configurable controls.
+- [ ] Major placeholder art replaced; licensed/original assets, animation, weather and cohesive audio audited.
+- [ ] Representative hardware performance measured; 1080p/60 FPS target assessed honestly.
+- [ ] Windows runtime and normal offline gameplay actually verified.
+- [ ] Cross-browser coverage and human playtesting/review completed; major bugs resolved.
+- [ ] Final source, Web/Windows builds, notices, release notes and limitations audited.
 - [ ] Human owner declares release/PR ready; authorized 1.0.0 release published.
 
-Preserve prereleases. Do not tick gates from code presence, planning, export success or simulated tests alone.
+Do not tick gates from planning, source presence, simulated checks, export alone or AI claims of human review. Preserve prereleases and saves.

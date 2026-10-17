@@ -12,7 +12,7 @@ Craft a building plan and hammer in inventory. Press B to build; 1–9 chooses f
 
 Select the hammer: left click repairs, U upgrades, X dismantles. Costs are charged to inventory; removing supports collapses unsupported pieces. Empty every affected container first. No demolition refund. Station slots accept drag/drop and bulk transfers; start/stop processing in their panel. Campfires cook two berries with one wood into a ration; furnaces smelt two ore with one wood into metal.
 
-Cupboards hold material upkeep for connected bases, charged every five simulated minutes after a 30-minute new/migration grace. No offline decay. E binds a sleeping bag for safe respawning, or opens a workbench that unlocks the metal pickaxe recipe within six metres. Upkeep, bag binding and workbench crafting are verified; the extended wall/window/stair/bed catalog is under current validation. See DEVELOPMENT_STATUS.md for exact sources/builds.
+Cupboards hold material upkeep for connected bases, charged every five simulated minutes after a 30-minute new/migration grace. No offline decay. E binds a sleeping bag for safe respawning, or opens a workbench that unlocks the metal pickaxe recipe within six metres. Construction, upkeep, bound bag/bed respawn, workbench crafting and extended wall/window/stair systems are integrated with declared validation. See DEVELOPMENT_STATUS.md for exact sources/builds.
 
 Stairs lead to the adjacent upper floor in their facing direction. Aim at stairs and select floor to snap a landing; leave the tile above stairs open as a stairwell. Beds and bags share one bound respawn, with nearby collision checks before spawning.
 

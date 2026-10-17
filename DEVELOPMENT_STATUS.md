@@ -1,53 +1,44 @@
-# Development status — Milestone 2/rendering verified; base progression active
+# SoloSurvival development status
 
-Updated 2026-10-17 UTC. Branch `codex/godot-first-playable`, [draft PR #1](https://github.com/unknown0v/SoloSurvival/pull/1). Continue autonomously through ROADMAP.md; no next-phase approval is needed.
+Updated 2026-10-17 UTC. Branch `codex/godot-first-playable`; [draft PR #1](https://github.com/unknown0v/SoloSurvival/pull/1). Milestone 2 and several Phase A extensions are playable and verified. Version 1.0 is incomplete.
 
-## Latest verified playable state
+## Play, source and downloads
+- [Play in the browser](https://unknown0v.github.io/SoloSurvival/)
+- [Latest verified Web/Windows preview](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-4f07a3bd5d20)
+- Tested gameplay source: `4f07a3bd5d20a8b5bfc87d9553010209b958694a`, [cloud run 39048713145](https://github.com/unknown0v/SoloSurvival/actions/runs/39048713145).
+- Earlier immutable M1/M2/progression releases remain available. Following documentation-only commits do not change the tested game payload.
 
-[Play](https://unknown0v.github.io/SoloSurvival/) · [M2 Web/Windows downloads](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-b30937aefd4b) · [Preserved M1 release](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-8fc739d2a557)
+## Integrated gameplay
+M1 remains intact: one seeded 640 m island, first-person movement/sprint/crouch/jump/swim, gathering and durability, 36-slot inventory/six-slot bar, stack/split/drag/bulk transfer, timed crafting, health/hunger/thirst, day/night, death/recovery and saves.
 
-Source `b30937aefd4b0702c036603df3eb4e8af5471325`, [cloud run 39044434999](https://github.com/unknown0v/SoloSurvival/actions/runs/39044434999), passed compilation/import, **95 headless assertions**, Web/Windows exports, package/license/itch-size checks, and full Chromium software-WebGL interactions on both the exported build and actual Pages URL. Both emitted BROWSER_SMOKE_PASS, CONSTRUCTION_BROWSER_PASS and PROCESSING_BROWSER_PASS.
+Construction now includes plan/hammer, square foundations, full/half walls, window/door frames, floors, flat roofs, doors, walkable stairs/upper landings, storage, campfires, furnaces, cupboards, sleeping bags, beds and a basic workbench. Placement snaps/rotates and checks support, terrain, reach and obstruction. Twig/wood/stone/metal tiers have real costs, health, upgrades, damage, repair and collapse. Stairs need an open stairwell and support their adjacent upper landing.
 
-Actual browser inputs imported a schema-1 fixture containing only M1 resources/items, crafted the plan/hammer, placed a foundation/frame/door, opened/closed/upgraded the door, placed storage, deposited contents, saved/reloaded, dismantled empty deployables, cooked berries, smelted ore, and restored station contents/state. This is fixture-assisted integration coverage, not the full gather-to-endgame human acceptance walkthrough.
+Stations cook berries and smelt ore with wood, retaining ingredients when output is full. Connected cupboards pool upkeep materials every five simulated minutes after a 30-minute initial/migration grace; no offline decay. Exactly one bag/bed can bind respawn; capsule queries choose a clear adjacent spawn. A nearby workbench unlocks the metal pickaxe recipe. These are independent solo tuning, not Rust parity.
 
-## Integrated features
+Movement now keeps commanded motion separate from collision velocity and uses floor snapping, fixing slow/stuck uphill traversal. Height queries match the existing terrain triangles without changing seed/vertex heights. Trees use regional batches with per-resource depletion/respawn ownership. Stable interaction IDs survive collider rebuilds.
 
-All M1 systems remain: one seeded 640 m island, first-person movement/crouch/jump/swim/fall/drowning, resources/tool durability, 36-slot inventory and six-slot hotbar, crafting queue, health/food/water, day/night, death containers/respawn/recovery and saves.
+## Executed validation
+The linked run passed:
+- Godot import/compilation and **145 headless assertions**: inventory/crafting conservation, malformed/future saves, backup recovery, support/collapse, upgrades/repair, processing, upkeep/material/separate-base behavior, migration, stable targets, real terrain/door/player collisions, fall damage, death/recovery, actual controller stair ascent and clear bed/bag respawn.
+- **Five JavaScript confirmation cases** for matching/stale data, timeout, cancellation and denied storage. These simulated failure cases complement real browser persistence checks.
+- Web/Windows exports, ZIP/license notices and itch.io size/path checks.
+- Full exported-browser Chromium input: gathering/depleting a real tree, movement/collision, inventory, save import, plan/hammer crafting, seven-piece building including walls/roof/door, door operation/upgrade/damage/repair, storage, cooking/smelting, cupboard contents, bound-bag persistence, workbench tool crafting, half walls/windows/stairs, walking onto an upper landing and durable reloads.
+- Public Pages source-manifest **and compiled-payload SHA** verification, then actual hosted core gameplay, building/door/repair/storage and save/reload checks. The hosted repeat intentionally skips the full processing/progression/extended-geometry suite already run against the exported payload.
+- Browser fixtures supplied valid M1/M2 inventory through the normal file-picker UI; no mutable test command bridge exists. This is not the complete gather-to-endgame human walkthrough.
 
-M2 adds building plan and hammer, square foundations/walls/floors/flat roofs/frames/doors, 3 m snapping, rotation, green/red previews, reach/terrain/player/resource/structure clearance, twig/wood/stone/metal tiers, costs, upgrade/repair/damage, support propagation and collapse. Storage and wood-fueled cooking/smelting persist inventory, active flag and progress. Nonempty affected containers block destruction to preserve items; demolition has no refund. Limit 256 pieces/four upper levels.
+Browser snapshots used 960×540 Chromium/SwiftShader: latest startup/gathering samples were 5–7 FPS and 66 draw calls. Earlier runs ranged 1–4 FPS. These variable samples do not prove a reliable speed improvement or suitable-hardware 60 FPS. Pre-batching draw counts, CPU time, peak family memory, hardware GPU and 1080p performance were not measured.
 
-Terrain height queries now interpolate the exact existing 4 m collision triangles; original vertex heights/seed are unchanged. Existing save path remains `user://island-v1.json`: read schemas 1/2, write 2; integrity, backups, rejected-file preservation and future-version blocking remain. Browser saves report success only after read-only IndexedDB confirmation of the exact saved file, fixing an observed furnace reload reverting to an older generation.
+## Saves and builds
+Same historical save path `user://island-v1.json`; read schemas 1–4, write 4. Core progress, building health/tier, inventories, processing, upkeep and spawn binding persist. Integrity envelopes, backups, rejected-file preservation and future-version write blocking remain. Browser success waits for exact IndexedDB readback; wait for the confirmation before reloading and keep downloaded backups.
 
-## Rendering follow-up verified
+Observed ZIP sizes: Web 10,339,440 bytes, Windows 38,201,100 bytes. Windows is unsigned; it has **not** been executed at runtime. No human playtest, Firefox/Safari or real-device benchmark was performed. Browser UI drag/drop/splitting and every movement mode are not yet fully driven graphically.
 
-Source `be72860fe4ef25f6171bd553bfa9356cd394a677`, [run 39045492002](https://github.com/unknown0v/SoloSurvival/actions/runs/39045492002), passed 100 headless assertions, five JavaScript confirmation cases, both exports and full exported/public browser checks. Actual browser rendering verified full tree depletion; construction now included walls/roof, seven saved pieces, door operation/upgrading and storage. Cooking/smelting and their durable reloads also passed in both environments.
+## Remaining work and constraints
+Triangle foundations/floors, practical double doors, armored tier, locks and defensive deployables remain Phase A gaps. Equipment, bleeding/temperature/radiation, dropped items, weapons/ammo/combat, wildlife/NPCs, meaningful monuments/loot, research/recycling/advanced progression and final art/audio/UI remain roadmap work. Current meshes/materials are simplified procedural placeholders.
 
-The equivalent software-WebGL startup/gathering snapshots showed 66 draw calls and 1–4 FPS after batching, against roughly 2–3 FPS before. These variable snapshots do not establish a reliable speed improvement. CPU time, peak process-family memory and hardware-GPU performance were not measured.
+Nonempty affected containers block destruction, including a decay collapse, rather than lose stored items. Persistent debris/drop ownership is needed before NPC base destruction. There is no upkeep offline, no demolition refund, and at most 256 pieces/four upper levels. No multiplayer/accounts/server infrastructure.
 
-## Current increment, awaiting validation
+## Continuation and account state
+No account/tool authorization blocker. GitHub write access works; no credential refresh is needed. Pages is enabled. All source/build/test operations were remote; no laptop tools were installed or executed. Only free public standard runners, Pages and Releases were used; no paid infrastructure provisioned. Optional itch.io workflow is prepared but unconfigured.
 
-Cupboard upkeep/decay, sleeping-bag binding/safe respawn, workbench-gated metal pickaxe and schema-3 maintenance data are implemented for the next cloud run. Read older schemas 1/2 through the format owner, retaining existing inventory/world data and applying defaults for new fields. Upkeep starts after a 30 simulated-minute new/migration grace, charges per material every five simulated minutes and does not advance offline. Connected cupboards pool material; nonempty collapse protection remains. Browser tests add schema-2 fixture import and real cupboard/bag/workbench/tool operations; the hosted repeat is reduced to core gameplay and construction/storage reload to avoid duplicating the full processing/progression run.
-
-### Prior rendering approach
-
-Forest rendering moves from individual tree meshes to regional MultiMesh batches with per-resource depletion/respawn ownership. The superseded tree-rendering path is removed. The next CI adds batch lifecycle checks, readback error/cancellation tests and browser wall/roof placement. A placement review also preserves the explicitly selected socket's base height.
-
-Before this increment, equivalent 960×540 software-WebGL startup/gathering snapshots were roughly 1–3 FPS. New draw-call/FPS telemetry will record observations; no performance improvement or suitable-hardware 60 FPS claim is made yet. CPU time, peak family memory and real-device GPU performance remain unmeasured.
-
-## Remaining scope and limits
-
-Phase A still needs triangle pieces, half walls, window frames, stairs, practical double doors, armored tier, beds, locks and defenses; cupboard upkeep, sleeping bags and a basic workbench are under current validation. Equipment/status hazards, weapons/combat, wildlife/NPCs, monuments/loot, research/progression, final art/audio/UI and performance work remain. Follow ROADMAP.md in dependency order.
-
-No human playtest, native Windows runtime verification, Firefox/Safari or hardware-GPU benchmark. Windows is unsigned. Browser UI drag/drop and complete movement modes are not yet fully driven graphically. Campfire cooking currently uses gathered berries; hunting/meat comes later. Stations/buildings use simplified original geometry. No Rust parity or 1.0 claim.
-
-All development/build execution is remote. Free public standard Linux runners, Pages and release hosting only; no paid infrastructure or local installations/execution. Same-repository duplicate PR builds are skipped; trusted branch pushes perform validation/publication. Optional itch.io workflow remains unconfigured.
-
-## Continuation
-
-Inspect current branch head and CI before changing anything. Fix active-increment regressions first; preserve the verified M2 release above. Update this file and PR with exact next verified source/run. Then continue Phase A extensions and survival/progression without asking which ordinary feature is next. See AGENTS.md and RELEASE_CHECKLIST.md. No background execution is configured after a session ends.
-
-## Base-progression checkpoint verified
-
-Source `46232e96790ab03daf41d79b22b53e32bf494b33`, [run 39046908209](https://github.com/unknown0v/SoloSurvival/actions/runs/39046908209), passed 126 headless assertions, five JavaScript confirmation tests, both exports and complete exported-browser cooking/smelting/upkeep-storage/bag/workbench-tool integration. The public Pages repeat passed core gameplay and seven-piece construction, repair and storage reload; it intentionally did not repeat processing/progression. [Preserved verified release](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-46232e96790a).
-
-Active unverified follow-up: half walls, window frames, walkable stairs with adjacent upper landings and open stairwells, beds sharing the bound-spawn owner, safe spawn offsets, schema-4 migration and compiled source identity. The next cloud suite tests actual controller stair ascent and browser placement/ascent/reload. No completion or successful graphical test is claimed before that run finishes.
+Resume by inspecting this branch's actual head and pinned run, then implement triangle pose/geometry support and remaining Phase A dependencies. Follow AGENTS.md and ROADMAP.md, preserve saves/releases and keep the PR draft. No background task or scheduler is configured after this session.

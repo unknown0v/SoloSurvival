@@ -1,11 +1,14 @@
 # Asset and dependency licenses
 
-| Content | Source | License / provenance |
+| Content | Exact source / provenance | License / attribution |
 |---|---|---|
-| Current terrain, meshes, shaders, materials and generated impact audio | SoloSurvival repository authorship | Original procedural implementation, project MIT license |
-| Engine and official export templates | https://github.com/godotengine/godot/releases/tag/4.7.2-stable | Godot MIT and bundled third-party notices; exact official LICENSE.txt/COPYRIGHT.txt included in exports |
-| Runtime dependencies bundled by Godot | Official Godot distribution | See exported Godot COPYRIGHT.txt |
-| CI browser tooling | https://github.com/microsoft/playwright | Apache-2.0; development-only in ephemeral runners |
-| Chromium browser | Playwright-downloaded official browser tooling | Development-only; no browser binary shipped as game asset |
+| Terrain, trees/rocks/foliage, construction/deployable/tool meshes, shaders, procedural textures and impact audio | Original SoloSurvival code in scripts/, shaders/ and scenes/ | Project MIT license; no external game art/audio |
+| Godot 4.7.2 engine and official export templates | https://github.com/godotengine/godot/releases/tag/4.7.2-stable | MIT and bundled third-party notices |
+| Godot bundled libraries/font and engine assets | Exact official distribution | Exported Godot COPYRIGHT.txt and LICENSE.txt |
+| Cloud Playwright 1.56.1 | https://github.com/microsoft/playwright | Apache-2.0; development only, not shipped |
+| Cloud Chromium | Playwright browser tooling | Development only; no browser executable shipped |
+| Pinned checkout action | .github/workflows/godot.yml commit reference | CI tooling only |
 
-No externally downloaded game art, sound, model or texture has been added. Before introducing one, record exact source URL, creator, license/version, attribution, modifications and redistributed files. Prefer CC0 when suitable; never assume “free download” grants redistribution rights. No Rust proprietary assets are included. See Documentation/THIRD_PARTY.md for export notices.
+Exports include exact [engine LICENSE](https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt), [COPYRIGHT notices](https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt) and the project MIT license. See Documentation/THIRD_PARTY.md.
+
+No externally sourced game models, textures, sounds or animations have been added. No Rust proprietary assets are included. Future assets require creator, exact source, license/version, modifications, files and attribution before redistribution; prefer CC0 when suitable. “Free download” alone is insufficient.
