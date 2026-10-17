@@ -130,6 +130,7 @@ func update_light() -> void:
 	environment.fog_light_color = Color("#202c3e").lerp(Color("#9aafb0"),daylight)
 
 func _process(dt: float) -> void:
+	var real_dt: float = dt
 	if not ready_to_play:
 		return
 	if playing and not paused and float(stats.health)>0:
@@ -150,7 +151,7 @@ func _process(dt: float) -> void:
 		if save_timer>=30:
 			save_timer = 0
 			save_world(false)
-	web_timer += dt
+	web_timer += real_dt
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
