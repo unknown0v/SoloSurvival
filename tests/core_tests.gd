@@ -97,14 +97,14 @@ func save_tests() -> void:
 	check(recovered.write(updated),"Recovered world saves successfully")
 	var future: Dictionary = updated.duplicate(true)
 	future.version = 999
-	write_text(path,Save.wrap(future))
+	write_text(path,Save.encode_save(future))
 	var unsupported = Save.new(path)
 	check(unsupported.load_world().is_empty() and not unsupported.writable,"Future version blocks writes without rollback")
-	check(FileAccess.get_file_as_string(path)==Save.wrap(future),"Future save remains byte-for-byte intact")
+	check(FileAccess.get_file_as_string(path)==Save.encode_save(future),"Future save remains byte-for-byte intact")
 	var malformed: Dictionary = original.duplicate(true)
 	malformed.stats.health = -1
 	check(Save.validate(malformed)!="","Invalid survival stats rejected")
-	var envelope: Dictionary = JSON.parse_string(Save.wrap(original))
+	var envelope: Dictionary = JSON.parse_string(Save.encode_save(original))
 	envelope.sha256 = "mismatch"
 	check(Save.unwrap(JSON.stringify(envelope)).has("error"),"Digest mismatch rejected")
 	for filename in DirAccess.get_files_at("user://"):

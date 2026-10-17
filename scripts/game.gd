@@ -110,7 +110,7 @@ func setup_environment() -> void:
 	update_light()
 
 func update_light() -> void:
-	sun.rotation_degrees = Vector3(hour/24.0*360.0-90.0,-30,0)
+	sun.rotation_degrees = Vector3(hour/24.0*360.0+90.0,-30,0)
 	var daylight: float = clampf(sin((hour-6.0)/12.0*PI)*1.2,0,1)
 	sun.light_energy = lerpf(0.015,1.15,daylight)
 	sun.light_color = Color("#e2a877").lerp(Color("#fff1d2"),daylight)
@@ -332,7 +332,7 @@ func save_world(notify: bool = true) -> void:
 func download_save() -> void:
 	if not ready_to_play:
 		return
-	var text: String = SaveStore.wrap(capture())
+	var text: String = SaveStore.encode_save(capture())
 	if OS.has_feature("web"):
 		JavaScriptBridge.download_buffer(text.to_utf8_buffer(),"solosurvival-save.json","application/json")
 		say("Save backup downloaded. Keep it somewhere safe.")

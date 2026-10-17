@@ -53,7 +53,7 @@ static func validate(data: Variant) -> String:
 			return "Invalid death container contents."
 	return ""
 
-static func wrap(data: Dictionary) -> String:
+static func encode_save(data: Dictionary) -> String:
 	var payload: String = JSON.stringify(data)
 	return JSON.stringify({"format":1, "sha256":payload.sha256_text(), "payload":payload})
 
@@ -120,7 +120,7 @@ func write(data: Dictionary) -> bool:
 	if file == null:
 		message = "Cannot create save: "+error_string(FileAccess.get_open_error())
 		return false
-	file.store_string(wrap(data))
+	file.store_string(encode_save(data))
 	file.flush()
 	var result: Error = file.get_error()
 	file.close()

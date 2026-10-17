@@ -159,7 +159,7 @@ func update_model(dt: float) -> void:
 		if item=="rock":
 			art.rock(model,Vector3.ZERO,Vector3(0.14,0.11,0.17),stone,2)
 		elif item in ["axe","pickaxe"]:
-			var handle := art.cylinder(model,Vector3(0,-0.08,0),0.018,0.42,wood,0.012)
+			var handle: MeshInstance3D = art.cylinder(model,Vector3(0,-0.08,0),0.018,0.42,wood,0.012)
 			handle.rotation.z = -0.2
 			art.rock(model,Vector3(-0.01,0.12,0),Vector3(0.12,0.075,0.04) if item=="axe" else Vector3(0.18,0.035,0.04),stone)
 		elif item=="torch":

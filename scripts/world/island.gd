@@ -112,12 +112,12 @@ func resource(id: int, kind: String, x: float, z: float) -> void:
 	game.resource_data[key] = state
 	nodes[key] = {"kind":kind,"body":body,"shape":shape,"state":state}
 	body.rotation.y = rng.randf_range(0,TAU)
-	set_visible(key,float(state.hp)>0)
+	set_resource_visible(key,float(state.hp)>0)
 
 func max_health(kind: String) -> float:
 	return 150.0 if kind=="tree" else 1.0 if kind in ["cloth","berries"] else 120.0
 
-func set_visible(id: String, shown: bool) -> void:
+func set_resource_visible(id: String, shown: bool) -> void:
 	nodes[id].body.visible = shown
 	nodes[id].shape.set_deferred("disabled",not shown)
 
@@ -148,7 +148,7 @@ func harvest(id: String, tool: String) -> bool:
 		r.state.hp = 0.0
 	if float(r.state.hp)<=0:
 		r.state.respawn = game.elapsed+600.0
-		set_visible(id,false)
+		set_resource_visible(id,false)
 	game.say("+%d %s" % [gathered,game.items.ITEMS[item].name])
 	game.wear_tool()
 	return true
@@ -158,7 +158,7 @@ func tick() -> void:
 		var r: Dictionary = nodes[id]
 		if float(r.state.hp)<=0 and game.elapsed>=float(r.state.respawn):
 			r.state.hp = max_health(r.kind)
-			set_visible(id,true)
+			set_resource_visible(id,true)
 
 func update_corpse() -> void:
 	for old in corpse_bodies:
