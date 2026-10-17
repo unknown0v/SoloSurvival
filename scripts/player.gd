@@ -59,8 +59,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game==null or not game.ready_to_play:
 		return
 	if event is InputEventMouseMotion and game.playing and not game.menu_open and Input.mouse_mode==Input.MOUSE_MODE_CAPTURED:
-		rotation.y = wrapf(rotation.y-event.relative.x*sensitivity,-PI,PI)
-		pitch = clampf(pitch-event.relative.y*sensitivity,-1.45,1.45)
+		rotation.y = wrapf(rotation.y-event.screen_relative.x*sensitivity,-PI,PI)
+		pitch = clampf(pitch-event.screen_relative.y*sensitivity,-1.45,1.45)
 	if event is InputEventMouseButton and event.pressed and game.playing and not game.menu_open and not game.paused:
 		if event.button_index==MOUSE_BUTTON_LEFT and cooldown<=0:
 			cooldown = 0.65
@@ -74,11 +74,12 @@ func _physics_process(dt: float) -> void:
 	if game==null or not game.ready_to_play:
 		return
 	update_model(dt)
-	if not game.playing or game.menu_open or game.paused or float(game.stats.health)<=0:
+	if not game.playing or game.paused or float(game.stats.health)<=0:
 		velocity = Vector3.ZERO
 		return
 	dt = minf(dt,0.1)
-	var crouch: bool = Input.is_physical_key_pressed(KEY_CTRL)
+	var blocked: bool = game.menu_open
+	var crouch: bool = crouched if blocked else Input.is_physical_key_pressed(KEY_CTRL)
 	if not crouch and crouched:
 		var clearance := PhysicsShapeQueryParameters3D.new()
 		clearance.shape = standing_probe
@@ -90,22 +91,22 @@ func _physics_process(dt: float) -> void:
 	capsule.height = 1.2 if crouch else 1.8
 	body_shape.position.y = capsule.height*0.5
 	var direction := Vector3.ZERO
-	if Input.is_physical_key_pressed(KEY_W):
+	if not blocked and Input.is_physical_key_pressed(KEY_W):
 		direction.z -= 1
-	if Input.is_physical_key_pressed(KEY_S):
+	if not blocked and Input.is_physical_key_pressed(KEY_S):
 		direction.z += 1
-	if Input.is_physical_key_pressed(KEY_A):
+	if not blocked and Input.is_physical_key_pressed(KEY_A):
 		direction.x -= 1
-	if Input.is_physical_key_pressed(KEY_D):
+	if not blocked and Input.is_physical_key_pressed(KEY_D):
 		direction.x += 1
 	direction = (transform.basis*direction).normalized()
-	var sprint: bool = Input.is_physical_key_pressed(KEY_SHIFT) and Input.is_physical_key_pressed(KEY_W) and not crouch
+	var sprint: bool = not blocked and Input.is_physical_key_pressed(KEY_SHIFT) and Input.is_physical_key_pressed(KEY_W) and not crouch
 	swimming = global_position.y < -0.7
 	var speed: float = 2.2 if swimming else 1.8 if crouch else 5.5 if sprint else 3.5
 	velocity.x = move_toward(velocity.x,direction.x*speed,dt*25)
 	velocity.z = move_toward(velocity.z,direction.z*speed,dt*25)
 	if swimming:
-		velocity.y = move_toward(velocity.y,2.4 if Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
+		velocity.y = move_toward(velocity.y,2.4 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
 		fall_velocity = 0
 	elif is_on_floor():
 		if not was_grounded and fall_velocity < -12:
@@ -131,10 +132,10 @@ func _physics_process(dt: float) -> void:
 	var from: Vector3 = camera.global_position
 	var query := PhysicsRayQueryParameters3D.create(from,from-camera.global_basis.z*4.5,1)
 	hit = get_world_3d().direct_space_state.intersect_ray(query)
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and cooldown<=0:
+	if not blocked and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and cooldown<=0:
 		cooldown = 0.65
 		game.primary_action()
-	game.prompt = interaction_prompt()
+	game.prompt = "" if blocked else interaction_prompt()
 
 func interaction_prompt() -> String:
 	if not hit.is_empty():

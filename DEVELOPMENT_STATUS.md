@@ -14,7 +14,11 @@ Branch: `codex/godot-first-playable`. Source and all engine work are remote; not
 - Original procedural meshes, materials and impact audio; no proprietary Rust assets or code.
 
 ## Verification
-Cloud run 39039781974 compiled the Godot scripts and passed 43 assertions, including the real 3D scene, physical terrain collision, gathering, tool durability, crafting, inventory and save corruption/recovery. It generated 232 resource nodes. Web export then stopped because the setup script extracted threaded templates while the preset requires single-threaded templates. That extraction is corrected in this commit. Exports and browser smoke checks remain pending; no human playtest or laptop performance claim.
+Cloud run [39040365174](https://github.com/unknown0v/SoloSurvival/actions/runs/39040365174) passed engine compilation, 43 headless assertions and actual Chromium software-WebGL gameplay checks (startup, gathering, movement, terrain collision, local save and browser reload). The real scene generated 232 resource nodes. Web and Windows exports succeeded and [preview-9346b2628bbc](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-9346b2628bbc) was published. Web bundle: 11 files, 39,997,403 bytes unpacked, approximately 10.3 MB compressed; Windows ZIP approximately 38.2 MB.
+
+This commit adds stronger death/recovery and inventory-menu checks plus capture-safe browser input. These added checks are pending its CI run. Earlier headless exits reported two ObjectDB instances; verbose diagnostics are enabled to identify the remaining cleanup. No human playtest or native Windows runtime test has occurred. Chromium software-rendered frame rates were 1–18 FPS during cold startup and smoke execution; these are cloud software-renderer observations, not laptop/GPU performance claims.
+
+Validated Web files are on the owned generated gh-pages branch. Automatic Pages configuration returned HTTP 403; repository owner action is required at Settings > Pages > Deploy from a branch > gh-pages / (root). The connected collaborator can publish source and releases; refreshing Git credentials is not required.
 
 ## Fidelity gaps and priorities
 This is a first milestone, not a finished Rust recreation. Visuals are procedural and simplified. Construction, repair/upkeep, processing, weapons, armor, wildlife, enemy AI, monuments, loot, weather, advanced progression, animations and native quality upgrades remain. No human playtest, laptop performance measurement or real-provider REA analysis has occurred. There is no network gameplay or game server.

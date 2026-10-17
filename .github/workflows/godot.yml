@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          godot --headless --path . --script res://tests/core_tests.gd 2>&1 | tee /tmp/godot-tests.log
+          godot --headless --verbose --path . --script res://tests/core_tests.gd 2>&1 | tee /tmp/godot-tests.log
           grep 'SOLOSURVIVAL_TESTS' /tmp/godot-tests.log
           if grep -E 'SCRIPT ERROR:|Parse Error:' /tmp/godot-tests.log; then exit 1; fi
       - name: Export Web and Windows with official templates

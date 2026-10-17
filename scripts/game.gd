@@ -192,6 +192,8 @@ func select_slot(index: int) -> void:
 		hud.refresh()
 
 func primary_action() -> void:
+	if float(stats.health)<=0:
+		return
 	var id: String = active_id()
 	if id in ["berries","water","bandage"]:
 		use_item(selected)
@@ -208,6 +210,8 @@ func primary_action() -> void:
 		world.harvest(str(player.hit.collider.get_meta("resource")),id)
 
 func interact() -> void:
+	if float(stats.health)<=0:
+		return
 	if not player.hit.is_empty():
 		var body: Object = player.hit.collider
 		if body.has_meta("resource"):
@@ -231,6 +235,8 @@ func wear_tool() -> void:
 		bag.changed.emit()
 
 func use_item(index: int) -> void:
+	if float(stats.health)<=0:
+		return
 	if index<0 or index>=bag.slots.size() or bag.slots[index].is_empty():
 		return
 	var item: Dictionary = bag.slots[index]
@@ -252,6 +258,8 @@ func use_item(index: int) -> void:
 	say("Used "+str(items.ITEMS[id].name))
 
 func queue_craft(id: String) -> void:
+	if float(stats.health)<=0:
+		return
 	if crafts.enqueue(id,bag):
 		say("Queued "+str(items.ITEMS[id].name))
 	else:
@@ -291,6 +299,8 @@ func die() -> void:
 
 func respawn() -> void:
 	stats = {"health":100.0,"hunger":70.0,"thirst":70.0}
+	selected = 0
+	inspected_slot = 0
 	if bag.count_item("rock")==0:
 		bag.add("rock",1)
 	if bag.count_item("torch")==0:
