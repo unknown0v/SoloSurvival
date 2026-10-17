@@ -58,6 +58,7 @@ const fs = require('node:fs');
     assert.ok(Math.abs(restored.position[0]-saved.position[0])<0.5,'Position restored across browser reload');
     assert.deepEqual(errors,[],'No script/runtime errors');
     console.log('BROWSER_SMOKE_PASS '+JSON.stringify({wood:saved.wood,savedPosition:saved.position,restoredPosition:restored.position}));
+    let pointerX=480,pointerY=270;
     const state = () => page.evaluate(() => window.__soloSurvivalState);
     async function clickUI(prefix) {
       const info = await page.evaluate(prefix => {
@@ -67,7 +68,9 @@ const fs = require('node:fs');
       },prefix);
       assert.ok(info,'Visible UI button: '+prefix);
       const canvas=await page.locator('#canvas').boundingBox();
-      await page.mouse.click(canvas.x+info.point[0]/info.size[0]*canvas.width,canvas.y+info.point[1]/info.size[1]*canvas.height);
+      pointerX=canvas.x+info.point[0]/info.size[0]*canvas.width;
+      pointerY=canvas.y+info.point[1]/info.size[1]*canvas.height;
+      await page.mouse.click(pointerX,pointerY);
       await page.waitForTimeout(400);
     }
     async function attack() {
@@ -79,7 +82,8 @@ const fs = require('node:fs');
       const dx=point[0]-s.position[0],dy=point[1]-(s.position[1]+1.65),dz=point[2]-s.position[2];
       const yaw=Math.atan2(-dx,-dz),pitch=Math.atan2(dy,Math.hypot(dx,dz));
       const delta=((yaw-s.yaw+Math.PI*3)%(Math.PI*2))-Math.PI;
-      await page.mouse.move(480-delta/0.002,270-(pitch-s.pitch)/0.002,{steps:4});
+      pointerX-=delta/0.002; pointerY-=(pitch-s.pitch)/0.002;
+      await page.mouse.move(pointerX,pointerY,{steps:4});
       await page.waitForTimeout(700);
     }
     // A valid M1 item/save fixture is imported through the shipped file-picker UI.
@@ -89,7 +93,7 @@ const fs = require('node:fs');
     await clickUI('RESTORE SAVE BACKUP');
     await (await chooserPromise).setFiles('build/milestone1-fixture.json');
     await page.waitForFunction(p => window.__soloSurvivalState?.ready && Math.abs(window.__soloSurvivalState.position[0]-p[0])<0.1 && Math.abs(window.__soloSurvivalState.position[2]-p[2])<0.1,fixture.position,{timeout:120000});
-    await page.mouse.move(480,270);
+    await page.mouse.move(480,270); pointerX=480; pointerY=270;
     await page.keyboard.press('Enter');
     await page.waitForFunction(()=>window.__soloSurvivalState.playing);
     await page.keyboard.press('Tab');
@@ -98,6 +102,7 @@ const fs = require('node:fs');
     await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='building_plan'),null,{timeout:30000});
     await clickUI('Building hammer');
     await page.waitForFunction(()=>window.__soloSurvivalState.inventory.some(s=>s.id==='hammer'),null,{timeout:45000});
+    await page.mouse.move(480,270); pointerX=480; pointerY=270;
     await page.keyboard.press('Tab');
     await page.waitForFunction(()=>!window.__soloSurvivalState.menu);
     await page.keyboard.press('KeyB');
@@ -106,8 +111,8 @@ const fs = require('node:fs');
     await attack();
     await page.waitForFunction(()=>window.__soloSurvivalState.structures===1);
     let base=(await state()).structure_data.find(p=>p.kind==='foundation');
-    const center=[base.cell[0]*3,base.y,base.cell[1]*3];
-    await aimAt(center);
+    const baseCenter=[base.cell[0]*3,base.y,base.cell[1]*3];
+    await aimAt(baseCenter);
     await page.keyboard.press('Digit5');
     await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='doorframe' && window.__soloSurvivalState.placement==='');
     await attack();
@@ -118,27 +123,29 @@ const fs = require('node:fs');
     await page.waitForFunction(()=>window.__soloSurvivalState.structures===3);
     await page.keyboard.press('KeyB');
     // Jump onto the foundation using actual keys, then operate and upgrade its door.
-    await aimAt([center[0],center[1]+1.65,center[2]-2]);
+    await aimAt([baseCenter[0],baseCenter[1]+1.65,baseCenter[2]-2]);
     await page.keyboard.down('KeyW'); await page.keyboard.down('Space');
-    await page.waitForFunction(z=>window.__soloSurvivalState.position[2]<z+1.35,center[2],{timeout:15000});
+    await page.waitForFunction(z=>window.__soloSurvivalState.position[2]<z+1.35,baseCenter[2],{timeout:15000});
     await page.keyboard.up('KeyW'); await page.keyboard.up('Space');
     await page.waitForTimeout(700);
-    await aimAt([center[0],center[1]+1.1,center[2]-1.5]);
+    await aimAt([baseCenter[0],baseCenter[1]+1.1,baseCenter[2]-1.5]);
     await page.keyboard.press('KeyE');
     await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.open));
+    await aimAt([baseCenter[0]-0.59,baseCenter[1]+1.15,baseCenter[2]-0.91]);
     await page.keyboard.press('KeyE');
     await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&!p.open));
+    await aimAt([baseCenter[0],baseCenter[1]+1.1,baseCenter[2]-1.5]);
     await page.keyboard.press('Digit3'); // crafted hammer is in slot 3
     await page.keyboard.press('KeyU');
     await page.waitForFunction(()=>window.__soloSurvivalState.structure_data.some(p=>p.kind==='door'&&p.tier===1));
     // Storage on this platform, keeping the player outside its collision box.
-    await aimAt(center);
+    await aimAt(baseCenter);
     await page.keyboard.press('KeyB'); await page.keyboard.press('Digit7');
     await page.waitForFunction(()=>window.__soloSurvivalState.build_kind==='storage' && window.__soloSurvivalState.placement==='');
     await attack();
     await page.waitForFunction(()=>window.__soloSurvivalState.structures===4);
     await page.keyboard.press('KeyB');
-    await aimAt([center[0],center[1]+0.38,center[2]]);
+    await aimAt([baseCenter[0],baseCenter[1]+0.38,baseCenter[2]]);
     await page.keyboard.press('KeyE');
     await page.waitForFunction(()=>window.__soloSurvivalState.station!=='');
     await clickUI('DEPOSIT ALL THAT FITS');

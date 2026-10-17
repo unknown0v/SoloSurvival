@@ -248,6 +248,59 @@ func save_tests() -> void:
 		if filename.begins_with(path.get_file()):
 			DirAccess.remove_absolute("user://"+filename)
 
+func construction_scene_tests(game) -> void:
+	var data: Dictionary = Save.unwrap(FileAccess.get_file_as_string("res://build/milestone1-fixture.json")).data
+	var pos: Array = data.position
+	game.player.position = Vector3(pos[0],pos[1],pos[2])
+	game.player.rotation.y = 0
+	game.player.pitch = float(data.pitch)
+	game.bag.add("wood",1000)
+	game.bag.add("stone",1000)
+	for i in range(4):
+		await physics_frame
+	game.buildings.build_kind = "foundation"
+	game.buildings.edge = 0
+	game.buildings.update_candidate()
+	check(game.buildings.placement_reason=="","Real terrain ray produces valid foundation preview")
+	check(game.buildings.place(),"Real-world foundation placement succeeds")
+	for i in range(2):
+		await physics_frame
+	game.buildings.build_kind = "doorframe"
+	check(game.buildings.place(),"Frame snaps through production ray placement")
+	for i in range(2):
+		await physics_frame
+	game.buildings.build_kind = "door"
+	check(game.buildings.place(),"Door physical clearance accepts its frame")
+	for i in range(2):
+		await physics_frame
+	var door: Dictionary = game.settlement.pieces.filter(func(p): return p.kind=="door")[0]
+	check(game.buildings.toggle_door(door.id) and door.open,"Production door opens through hinge joint")
+	for i in range(2):
+		await physics_frame
+	var at: Vector3 = game.Buildings.origin(door)
+	game.player.position = at+Vector3(0,0.05,-1.5)
+	for i in range(2):
+		await physics_frame
+	check(not game.buildings.toggle_door(door.id) and door.open,"Door cannot close through the player")
+	game.player.position = Vector3(pos[0],pos[1],pos[2])
+	for i in range(2):
+		await physics_frame
+	check(game.buildings.toggle_door(door.id) and not door.open,"Clear doorway closes")
+	var top: Dictionary = game.settlement.make_piece("floor",door.cell,float(door.y),1,0)
+	check(game.buildings.check_placement(top)=="","Floor accepts intentional wall/frame support joint")
+	var floor_piece: Dictionary = game.settlement.place(top,game.bag)
+	check(not floor_piece.is_empty(),"Supported floor instantiates collider")
+	for i in range(2):
+		await physics_frame
+	game.player.position = at+Vector3(0,3.1,0)
+	game.player.velocity = Vector3.ZERO
+	for i in range(30):
+		await physics_frame
+	check(absf(game.player.position.y-at.y-3)<0.2,"Player stands on constructed upper floor")
+	var storage: Dictionary = game.settlement.make_piece("storage",door.cell,float(door.y),1,0)
+	check(game.buildings.check_placement(storage)!="","Placement rejects overlap with the player")
+	check(Save.validate(game.capture())=="","Production building world serializes valid schema two")
+
 func run_tests() -> void:
 	domain_tests()
 	construction_tests()
@@ -290,6 +343,7 @@ func run_tests() -> void:
 	game.save_world(false)
 	check(Save.validate(game.capture())=="","Live world serializes validly")
 	check(game.save_count>0,"Real world saves to disk")
+	await construction_scene_tests(game)
 	game.queue_free()
 	await process_frame
 	finished = true

@@ -165,6 +165,11 @@ func check_placement(p: Dictionary) -> String:
 				var h: float = game.world.math.height(location.x+dx,location.z+dz)
 				if h<0.3 or float(p.y)-h>1.7 or h>float(p.y)+0.05:
 					return "Foundation needs dry, flatter ground."
+	if p.kind!="foundation":
+		for dx in [-1.3,0,1.3]:
+			for dz in [-1.3,0,1.3]:
+				if game.world.math.height(location.x+dx,location.z+dz)>location.y+0.05:
+					return "Terrain obstructs this socket."
 	var reason: String = game.settlement.reason(p)
 	if reason!="":
 		return reason
@@ -191,8 +196,10 @@ func clearance_blocked(p: Dictionary, except_id: String = "") -> bool:
 				var other: Dictionary = game.settlement.find(str(body.get_meta("structure")))
 				var same: bool = Settlement.same_cell(p,other)
 				var joint: bool = same and (
-					(p.kind in ["wall","doorframe"] and other.kind in ["wall","doorframe"] and p.edge!=other.edge and p.level==other.level)
-					or (p.kind in ["floor","roof"] and other.kind in ["wall","doorframe"] and p.level==other.level+1))
+					(p.kind=="door" and other.kind=="doorframe" and p.edge==other.edge and p.level==other.level)
+					or (p.kind in ["wall","doorframe"] and other.kind in ["wall","doorframe"] and p.edge!=other.edge and p.level==other.level)
+					or (p.kind in ["floor","roof"] and other.kind in ["wall","doorframe"] and p.level==other.level+1)
+					or (p.kind in ["wall","doorframe"] and other.kind in ["floor","roof"] and other.level==p.level+1))
 				if not joint:
 					return true
 	return false
