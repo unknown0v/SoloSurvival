@@ -12,8 +12,6 @@ var pitch: float = 0
 var sensitivity: float = 0.002
 var swing: float = 0
 var bob: float = 0
-var fall_velocity: float = 0
-var was_grounded: bool = false
 var current_item: String = ""
 var cooldown: float = 0
 var swimming: bool = false
@@ -105,19 +103,18 @@ func _physics_process(dt: float) -> void:
 	var speed: float = 2.2 if swimming else 1.8 if crouch else 5.5 if sprint else 3.5
 	velocity.x = move_toward(velocity.x,direction.x*speed,dt*25)
 	velocity.z = move_toward(velocity.z,direction.z*speed,dt*25)
+	var grounded_before: bool = is_on_floor()
 	if swimming:
 		velocity.y = move_toward(velocity.y,2.4 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
-		fall_velocity = 0
 	elif is_on_floor():
-		if not was_grounded and fall_velocity < -12:
-			game.damage((-fall_velocity-12)*6)
 		velocity.y = 6 if Input.is_physical_key_pressed(KEY_SPACE) else -2
 		fall_velocity = 0
 	else:
 		velocity.y -= 18*dt
-		fall_velocity = minf(fall_velocity,velocity.y)
+	var impact_speed: float = velocity.y
 	move_and_slide()
-	was_grounded = is_on_floor()
+	if is_on_floor() and not grounded_before and not swimming and impact_speed < -12:
+		game.damage((-impact_speed-12)*6)
 	position.x = clampf(position.x,-318,318)
 	position.z = clampf(position.z,-318,318)
 	if position.y < -15:

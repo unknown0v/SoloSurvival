@@ -34,7 +34,7 @@ Updated 2026-10-17 UTC. Source of truth: `codex/godot-first-playable`, [draft PR
 - The same browser checks against the actual public Pages URL, after verifying its deployed source manifest. Both emitted BROWSER_SMOKE_PASS.
 - The expanded verbose test run reported no ObjectDB leak warning.
 
-The later documentation/publication-retry follow-up does not change game code. Its workflow results remain independently visible in the PR checks. Release assets are immutable per source commit; retries preserve an existing release only when its target commit matches.
+The current suite contains 51 assertions, adding a real 16 m fall and inventory-open gravity regression to the 49-assertion baseline above. Landing damage now consumes the immediate move_and_slide collision result rather than duplicated prior-frame flags. The exact current-head results remain independently visible in the PR checks. Release assets are immutable per source commit; retries preserve an existing release only when its target commit matches.
 
 Observed Web bundle: 11 files, about 40 MB unpacked / 10.3 MB ZIP; Windows ZIP about 38.2 MB. Cloud software-renderer frame rates ranged roughly 1–18 FPS during cold startup and checks. This does not establish laptop or hardware-GPU performance. CPU time, peak process-family memory and hardware 1080p performance were not measured.
 

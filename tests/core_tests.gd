@@ -132,6 +132,15 @@ func run_tests() -> void:
 	game.primary_action()
 	check(game.bag.count_item("wood")>before,"Production action harvests wood")
 	check(game.bag.slots[0].condition==299,"Harvest consumes tool durability")
+	# A real airborne controller must land, lose health, and keep falling with inventory open.
+	game.menu_open = true
+	game.player.position.y += 16
+	game.player.velocity = Vector3.ZERO
+	for i in range(150):
+		await physics_frame
+	check(game.stats.health>0 and game.stats.health<95,"A hard landing applies fall damage")
+	check(absf(game.player.position.y-game.world.math.height(game.player.position.x,game.player.position.z))<1,"Inventory does not suspend gravity")
+	game.menu_open = false
 	var carried: int = game.bag.count_item("wood")
 	game.damage(100)
 	check(game.stats.health==0 and game.corpses.size()==1,"Death persists a corpse container")
