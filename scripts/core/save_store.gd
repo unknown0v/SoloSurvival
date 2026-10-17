@@ -6,6 +6,7 @@ const MAX_BYTES: int = 2097152
 var path: String
 var writable: bool = false
 var message: String = ""
+var last_text: String = ""
 
 func _init(filename: String = "user://island-v1.json") -> void:
 	path = filename
@@ -123,7 +124,8 @@ func write(data: Dictionary) -> bool:
 	if file == null:
 		message = "Cannot create save: "+error_string(FileAccess.get_open_error())
 		return false
-	file.store_string(encode_save(data))
+	var encoded: String = encode_save(data)
+	file.store_string(encoded)
 	file.flush()
 	var result: Error = file.get_error()
 	file.close()
@@ -136,5 +138,6 @@ func write(data: Dictionary) -> bool:
 	if DirAccess.rename_absolute(path+".tmp",path) != OK:
 		message = "Cannot commit save; original retained."
 		return false
+	last_text = encoded
 	message = "Saved on this device."
 	return true

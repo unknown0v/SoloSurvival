@@ -6,9 +6,12 @@ const SaveStore = preload("res://scripts/core/save_store.gd")
 const World = preload("res://scripts/world/island.gd")
 const Player = preload("res://scripts/player.gd")
 const Hud = preload("res://scripts/ui/hud.gd")
+const WebPersistence = preload("res://scripts/web/persistence.gd")
 const Settlement = preload("res://scripts/core/settlement.gd")
 const Buildings = preload("res://scripts/world/buildings.gd")
 const Sound = preload("res://scripts/world/sound.gd")
+var web_persistence
+var notify_browser_save: bool = false
 var settlement = Settlement.new()
 var buildings
 var build_mode: bool = false
@@ -81,6 +84,14 @@ func _ready() -> void:
 	sound = Sound.new()
 	add_child(sound)
 	sound.setup()
+	web_persistence = WebPersistence.new()
+	add_child(web_persistence)
+	web_persistence.setup()
+	web_persistence.completed.connect(func(ok: bool, text: String):
+		if notify_browser_save or not ok:
+			say(text)
+		notify_browser_save = false
+	)
 	ready_to_play = true
 	if not saves.writable:
 		hud.warning.text = saves.message
@@ -155,7 +166,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"save_pending":web_persistence.pending,"save_generation":web_persistence.generation,"persisted_generation":web_persistence.confirmed,"save_status":web_persistence.message,"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -391,6 +402,12 @@ func save_world(notify: bool = true) -> void:
 		return
 	if saves.write(capture()):
 		save_count += 1
+		if OS.has_feature("web"):
+			notify_browser_save = notify_browser_save or notify
+			web_persistence.confirm(saves.last_text,saves.path)
+			if notify:
+				say(web_persistence.message)
+			return
 	if notify:
 		say(saves.message)
 
