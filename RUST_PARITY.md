@@ -15,3 +15,7 @@ No Rust binaries, proprietary assets, source or protected data were copied/analy
 | Native | Windows x64 export produced | Native Windows runtime not verified |
 
 Never replace unmeasured comparisons with claims of Rust parity. Refresh entries after each validated increment.
+
+## Documented references inspected 2026-10-17
+
+[Facepunch tool cupboard, decay and building privilege](https://wiki.facepunch.com/rust/the_tool_cupboard) documents upkeep preventing building decay. This informs planned single-player upkeep; multiplayer building privileges are outside scope. No numerical timing or stability parity is established by this reference, and SoloSurvival upkeep is not yet implemented.

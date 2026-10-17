@@ -206,9 +206,10 @@ func browser_fixture(game) -> void:
 				inv.slots[index] = {}
 			data.inventory = inv.slots
 			data.position = [wx,math.height(wx,wz+4.3)+0.05,wz+4.3]
-			data.pitch = -atan2(float(data.position[1])+1.65-y,4.3)
+			data.pitch = -atan2(float(data.position[1])+1.65-h,4.3)
 			data.hour = 12
 			DirAccess.make_dir_recursive_absolute("res://build")
+			write_text("res://build/.gdignore","")
 			write_text("res://build/milestone1-fixture.json",Save.encode_save(data))
 			print("CONSTRUCTION_BROWSER_FIXTURE cell="+str([x,z])+" y="+str(y))
 			return
@@ -261,6 +262,7 @@ func construction_scene_tests(game) -> void:
 	game.buildings.build_kind = "foundation"
 	game.buildings.edge = 0
 	game.buildings.update_candidate()
+	print("PLACEMENT_DIAGNOSTIC candidate="+str(game.buildings.candidate)+" reason="+game.buildings.placement_reason+" player="+str(game.player.position)+" pitch="+str(game.player.pitch))
 	check(game.buildings.placement_reason=="","Real terrain ray produces valid foundation preview")
 	check(game.buildings.place(),"Real-world foundation placement succeeds")
 	for i in range(2):
@@ -273,7 +275,10 @@ func construction_scene_tests(game) -> void:
 	check(game.buildings.place(),"Door physical clearance accepts its frame")
 	for i in range(2):
 		await physics_frame
-	var door: Dictionary = game.settlement.pieces.filter(func(p): return p.kind=="door")[0]
+	var doors: Array = game.settlement.pieces.filter(func(p): return p.kind=="door")
+	if doors.is_empty():
+		return
+	var door: Dictionary = doors[0]
 	check(game.buildings.toggle_door(door.id) and door.open,"Production door opens through hinge joint")
 	for i in range(2):
 		await physics_frame

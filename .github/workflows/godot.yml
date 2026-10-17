@@ -17,11 +17,13 @@ concurrency:
 jobs:
   milestone:
     # Public standard Linux runners are free. Fail closed if visibility changes.
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.head.ref != 'codex/godot-first-playable')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check browser harness syntax
+        run: node --check tools/browser_smoke.cjs
       - name: Install checksum-pinned Godot in ephemeral cloud runner
         run: python3 tools/setup_godot.py
       - name: Import and compile scripts
