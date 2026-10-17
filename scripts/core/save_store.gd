@@ -1,5 +1,6 @@
 extends RefCounted
 const Inventory = preload("res://scripts/core/inventory.gd")
+const Settlement = preload("res://scripts/core/settlement.gd")
 const Crafting = preload("res://scripts/core/crafting.gd")
 const MAX_BYTES: int = 2097152
 var path: String
@@ -18,7 +19,7 @@ static func position_valid(pos: Variant) -> bool:
 static func validate(data: Variant) -> String:
 	if not data is Dictionary:
 		return "Save payload must be an object."
-	if data.get("version") != 1 or data.get("seed") != 197403:
+	if data.get("version") not in [1,2] or data.get("seed") != 197403:
 		return "Unsupported world version or seed."
 	if not position_valid(data.get("position")) or not number(data.get("yaw"),-100000,100000) or not number(data.get("pitch"),-1.5,1.5):
 		return "Invalid player transform."
@@ -41,7 +42,9 @@ static func validate(data: Variant) -> String:
 			return "Invalid resource identity."
 		if not number(r.get("hp"),0,200) or not number(r.get("respawn"),0,100000000):
 			return "Invalid resource state."
-	# Schema reserves independently owned extension data for future milestones.
+	if data.version==2 and not Settlement.valid(data.get("structures")):
+		return "Invalid structures, support graph or station contents."
+	# Version 1 remains readable; new worlds write version 2.
 	if not data.get("corpses") is Array or data.corpses.size()>32:
 		return "Invalid death containers."
 	var seen: Dictionary = {}

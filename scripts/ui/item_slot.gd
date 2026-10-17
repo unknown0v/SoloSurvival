@@ -14,6 +14,8 @@ func setup(owner_game, bag, slot: int, small: bool = false) -> void:
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_theme_font_size_override("font_size",12)
 	pressed.connect(func():
+		if inventory!=game.bag:
+			return
 		if index<6:
 			game.select_slot(index)
 		game.inspected_slot = index

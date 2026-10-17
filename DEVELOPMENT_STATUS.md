@@ -1,63 +1,24 @@
-# Development status — first playable milestone
+# Development status — Milestone 2
 
-Updated 2026-10-17 UTC. Source of truth: `codex/godot-first-playable`, [draft PR #1](https://github.com/unknown0v/SoloSurvival/pull/1). All development and engine execution were remote; no tools were installed or run on the owner's laptop.
+Updated 2026-10-17 UTC. Building on the existing first playable at `8fc739d2a5578c8be109b596c52e3411f0aa148d`, preserving its history and immutable release assets. Development and validation execute remotely through GitHub tools and public standard cloud runners; no local tool execution or installation.
 
-## Play and downloads
+## Implemented, awaiting cloud verification
 
-- Browser: https://unknown0v.github.io/SoloSurvival/
-- [Validated Web and Windows builds](https://github.com/unknown0v/SoloSurvival/releases).
-- Enter or click Embark, move with WASD, look with the mouse, select rock with 1, strike trees/stone with left click, gather plants with E, open inventory/crafting with Tab.
-- F5 saves; the pause/title menu downloads and restores validated JSON backups.
+- Separate construction model and world adapter: building plan, foundation/wall/floor/roof/doorframe/door, 3 m sockets, previews, rotation, reach/terrain/player/resource/structure clearance.
+- Twig, wood, stone and metal tiers; resource costs, health, repairs, damage, support propagation and collapse. Nonempty affected containers block dismantling/destruction rather than lose items.
+- Persistent storage, campfire berry cooking and wood-fueled metal-ore smelting, start/stop, inventory transfer, capacity-safe processing and simulated-time progress.
+- Save schema 2 at the existing save path, retaining version-1 loading and preserving future-version rejection, digest checks and backups.
+- Crafting scroll panel, building guide, station inventory panel, repaired inventory-open jump handling and cached support display.
+- Existing movement, harvesting, inventory, crafting, survival, death/recovery, day/night and browser save features retained.
 
-## Completed and integrated
+## Verification
 
-- Godot 4.7.2 + GDScript, Compatibility renderer, single-threaded Web and standalone Windows x64 presets.
-- One deterministic 640 m island with hills, beaches, forests, desert-colored terrain, snowy highlands, ocean and a fresh-water river.
-- First-person movement, sprint, collision-aware crouch, jump, swimming, fall damage and drowning.
-- 232 generated resource nodes in the measured seed: trees, stone, metal ore, hemp and berries; depleted nodes respawn after simulated time.
-- Starting rock/torch, held-tool visuals, durability, 36-slot inventory, six-slot hotbar, stacking, drag/drop, half transfer and splitting.
-- Crafting queue for hatchet, pickaxe, bandage and torch, reserved ingredients, capacity-safe delivery and atomic refunds.
-- Health, hunger, thirst, consumables, death containers, shoreline respawn and recovery.
-- Thirty-minute day/night cycle, fog, animated water, procedural materials/audio and tree distance LOD. Dynamic shadows default off on Web, on for native; the pause menu toggles them.
-- Validated local save/load, 30-second autosave, integrity checks, backup recovery and preservation of malformed/future saves. No offline time advancement.
-- Cloud CI, official checksum-pinned engine/templates, export checks, native bundle license notices, free GitHub release downloads and generated Pages publishing.
-- Optional itch.io deployment workflow prepared; no itch.io credentials configured or deployment performed.
+Implementation is not yet claimed tested. CI will compile scripts, run the existing 51 regression assertions plus new construction/migration/processing coverage, export Web/Windows and exercise browser interactions before publishing. The current public preview remains the last validated milestone until new checks succeed.
 
-## Executed validation
+Existing validated baseline: [run 39041783852](https://github.com/unknown0v/SoloSurvival/actions/runs/39041783852), 51 assertions, local and public Chromium software-WebGL interaction checks and both exports. [Preserved release](https://github.com/unknown0v/SoloSurvival/releases/tag/preview-8fc739d2a557).
 
-[Cloud run 39041098312](https://github.com/unknown0v/SoloSurvival/actions/runs/39041098312), source commit `b1c6c624cfadcc16e39e4871fcdeede842b8737d`, passed:
-- Godot script import/compilation.
-- 49 headless assertions covering inventory limits/transfers/splits, crafting reservation/completion/refund, malformed saves, digest validation, backup recovery and future-save preservation.
-- Production-scene generation, physics collision, gathering, tool wear, death/corpse persistence, respawn, recovery and live-world saving.
-- Web and Windows exports, ZIP structure and itch.io size/path/file-count checks.
-- Full Chromium on a cloud virtual display using software WebGL, at 960×540: startup, actual mouse-button gathering, keyboard movement, terrain collision, inventory open/close, save and reload.
-- The same browser checks against the actual public Pages URL, after verifying its deployed source manifest. Both emitted BROWSER_SMOKE_PASS.
-- The expanded verbose test run reported no ObjectDB leak warning.
+## Limits and remaining work
 
-The current suite contains 51 assertions, adding a real 16 m fall and inventory-open gravity regression to the 49-assertion baseline above. Landing damage now consumes the immediate move_and_slide collision result rather than duplicated prior-frame flags. The exact current-head results remain independently visible in the PR checks. Release assets are immutable per source commit; retries preserve an existing release only when its target commit matches.
+Independent simplified procedural visuals; no Rust parity claim. No human playtest, native Windows runtime verification, Firefox/Safari or hardware-GPU benchmark. Construction is capped at 256 pieces/four upper levels; no upkeep, offline processing or demolition refund. Campfire cooking initially uses gathered berries; hunting/meat comes with wildlife. No multiplayer/accounts/server infrastructure.
 
-Observed Web bundle: 11 files, about 40 MB unpacked / 10.3 MB ZIP; Windows ZIP about 38.2 MB. Cloud software-renderer frame rates ranged roughly 1–18 FPS during cold startup and checks. This does not establish laptop or hardware-GPU performance. CPU time, peak process-family memory and hardware 1080p performance were not measured.
-
-## Known limitations and fidelity gaps
-
-- No human playtest, native Windows runtime test, Firefox/Safari coverage or real-device GPU benchmark. Windows build is unsigned.
-- Browser file-picker restoration and UI drag/drop have not been driven in the automated browser test; their data validation, inventory and transfer semantics are covered headlessly.
-- Browser saves depend on this origin/browser's IndexedDB and can be lost if site data is cleared, private browsing is used, or storage is denied. Download backups. Windows is fully standalone; Web needs hosting for the initial load and has no guaranteed offline PWA cache.
-- This is not Rust parity. Geometry, foliage, terrain detail, materials, camera feel, reach, movement tuning, recipes, yields, sounds and UI are independent approximations. No lawful Rust reference binaries/assets were analyzed.
-- Construction/snapping, upgrades, upkeep, storage/workstations, cooking/smelting, weapons/ammunition, armor, temperature/bleeding/radiation, wildlife, enemy AI, monuments/loot, weather and advanced progression remain future milestones.
-- Crafting continues in inventory and resumes after death; no offline simulation. Up to 32 persistent death containers; at capacity, carried belongings are retained rather than discarded.
-- No multiplayer, dedicated server, matchmaking, runtime accounts or microtransactions.
-
-## Next priorities
-
-1. Review the playable loop and measure representative hardware performance; optimize render batching/LOD and controls.
-2. Add integrated foundation/wall snapping, storage, campfire cooking, furnace processing and persistence tests.
-3. Add weapon/combat and wildlife milestones, then monuments, loot and workbench progression.
-4. Improve original or CC0 environment art, animation, sound and weather, with an asset/license ledger.
-5. Verify the native Windows runtime and expand browser coverage before making quality/performance claims.
-
-## Account and budget state
-
-GitHub identity `sebsabyoussef20-rgb` has working write access; commits, branch publication and PR creation succeeded. No Git credential refresh is needed for this connection. The owner enabled Pages after automatic initial setup returned 403; subsequent publishing and hosted-game checks succeeded.
-
-Public standard Ubuntu runners and free Pages/release hosting are used. Custom validation jobs do not use caches or upload Actions artifacts; GitHub's managed Pages deployment has its own deployment artifact. No paid runner, Codespace, hosting plan or other paid infrastructure was provisioned; account-wide billing settings were not changed.
+Combat, weapons, wildlife/NPCs, monuments/loot, weather and advanced progression remain future milestones. Free public Linux runners, Pages and release hosting only; no paid infrastructure provisioned. Optional itch.io workflow remains unconfigured.

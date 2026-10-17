@@ -6,7 +6,13 @@ const SaveStore = preload("res://scripts/core/save_store.gd")
 const World = preload("res://scripts/world/island.gd")
 const Player = preload("res://scripts/player.gd")
 const Hud = preload("res://scripts/ui/hud.gd")
+const Settlement = preload("res://scripts/core/settlement.gd")
+const Buildings = preload("res://scripts/world/buildings.gd")
 const Sound = preload("res://scripts/world/sound.gd")
+var settlement = Settlement.new()
+var buildings
+var build_mode: bool = false
+var station_id: String = ""
 var bag = Inventory.new(36)
 var crafts = Crafting.new()
 var saves = SaveStore.new()
@@ -45,6 +51,7 @@ func _ready() -> void:
 		stats = saved.stats.duplicate(true)
 		resource_data = saved.resources.duplicate(true)
 		corpses = saved.corpses.duplicate(true)
+		settlement.pieces = saved.get("structures",[]).duplicate(true)
 		hour = float(saved.hour)
 		elapsed = float(saved.elapsed)
 		selected = int(saved.selected)
@@ -65,6 +72,9 @@ func _ready() -> void:
 	if not saved.is_empty():
 		p = Vector3(saved.position[0],saved.position[1],saved.position[2])
 	player.setup(self,p,float(saved.get("yaw",0)),float(saved.get("pitch",0)))
+	buildings = Buildings.new()
+	add_child(buildings)
+	buildings.setup(self)
 	hud = Hud.new()
 	add_child(hud)
 	hud.setup(self)
@@ -125,6 +135,7 @@ func _process(dt: float) -> void:
 	if playing and not paused and float(stats.health)>0:
 		dt = minf(dt,0.1)
 		elapsed += dt
+		settlement.tick(dt)
 		hour = fmod(hour+dt*24.0/1800.0,24)
 		update_light()
 		tick_survival(dt,Vector2(player.velocity.x,player.velocity.z).length()>4.5,player.camera.global_position.y < -0.25)
@@ -143,7 +154,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"ui":hud.diagnostics(),"structures":settlement.pieces.size(),"building":build_mode,"build_kind":buildings.build_kind,"placement":buildings.placement_reason,"station":station_id,"structure_data":settlement.pieces,"inventory":bag.slots,"crafts":crafts.jobs,"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"yaw":player.rotation.y,"pitch":player.pitch,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -159,6 +170,20 @@ func _unhandled_input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused else Input.MOUSE_MODE_CAPTURED
 			if paused:
 				save_world(false)
+	elif event.physical_keycode==KEY_B and playing and not paused and not menu_open:
+		if bag.count_item("building_plan")>0:
+			build_mode = not build_mode
+			say("Building plan: 1–9 select, R rotate, left click place." if build_mode else "Building plan put away.")
+		else:
+			say("Craft a building plan in your inventory first.")
+	elif event.physical_keycode==KEY_R and build_mode and not menu_open:
+		buildings.edge = (buildings.edge+1)%4
+		buildings.timer = 0
+	elif event.physical_keycode in [KEY_U,KEY_X] and playing and not paused and not menu_open and not build_mode:
+		hammer_action(event.physical_keycode==KEY_U)
+	elif event.physical_keycode>=KEY_1 and event.physical_keycode<=KEY_9 and build_mode and not menu_open:
+		buildings.build_kind = Settlement.KINDS[event.physical_keycode-KEY_1]
+		buildings.timer = 0
 	elif event.physical_keycode==KEY_TAB and playing and not paused:
 		toggle_inventory()
 	elif event.physical_keycode==KEY_F5:
@@ -174,11 +199,13 @@ func start_playing() -> void:
 	playing = true
 	paused = false
 	menu_open = false
+	station_id = ""
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func toggle_inventory() -> void:
 	if float(stats.health)<=0:
 		return
+	station_id = ""
 	menu_open = not menu_open
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if menu_open else Input.MOUSE_MODE_CAPTURED
 
@@ -194,8 +221,14 @@ func select_slot(index: int) -> void:
 func primary_action() -> void:
 	if float(stats.health)<=0:
 		return
+	if build_mode:
+		buildings.place()
+		return
 	var id: String = active_id()
-	if id in ["berries","water","bandage"]:
+	if id=="hammer":
+		hammer_action(false,true)
+		return
+	if id in ["berries","cooked_berries","water","bandage"]:
 		use_item(selected)
 		return
 	if id not in ["rock","axe","pickaxe"]:
@@ -203,6 +236,12 @@ func primary_action() -> void:
 	var item: Dictionary = bag.slots[selected]
 	if int(item.condition)<=0:
 		say("Your tool is broken. Craft another or recover a rock after respawning.")
+		return
+	if not player.hit.is_empty() and player.hit.collider.has_meta("structure"):
+		if settlement.strike(str(player.hit.collider.get_meta("structure")),12):
+			wear_tool()
+		else:
+			say("Empty all affected containers before destruction.")
 		return
 	player.swing = 1
 	sound.hit(false)
@@ -214,6 +253,14 @@ func interact() -> void:
 		return
 	if not player.hit.is_empty():
 		var body: Object = player.hit.collider
+		if body.has_meta("structure"):
+			var id: String = str(body.get_meta("structure"))
+			var p: Dictionary = settlement.find(id)
+			if p.kind=="door":
+				buildings.toggle_door(id)
+			elif Settlement.station(p.kind):
+				open_station(id)
+			return
 		if body.has_meta("resource"):
 			var id: String = str(body.get_meta("resource"))
 			if world.nodes[id].kind in ["cloth","berries"]:
@@ -241,7 +288,10 @@ func use_item(index: int) -> void:
 		return
 	var item: Dictionary = bag.slots[index]
 	var id: String = item.id
-	if id=="berries":
+	if id=="cooked_berries":
+		stats.hunger = minf(100,float(stats.hunger)+32)
+		stats.health = minf(100,float(stats.health)+4)
+	elif id=="berries":
 		stats.hunger = minf(100,float(stats.hunger)+12)
 		stats.thirst = minf(100,float(stats.thirst)+6)
 	elif id=="water":
@@ -295,6 +345,8 @@ func die() -> void:
 		say("Death-container limit reached. Your carried items are retained.")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	menu_open = false
+	station_id = ""
+	build_mode = false
 	save_world(false)
 
 func respawn() -> void:
@@ -331,7 +383,7 @@ func recover_corpse(id: String) -> void:
 
 func capture() -> Dictionary:
 	var p: Vector3 = player.position
-	return {"version":1,"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
+	return {"version":2,"structures":settlement.pieces.duplicate(true),"seed":197403,"position":[p.x,p.y,p.z],"yaw":player.rotation.y,"pitch":player.pitch,"selected":selected,"inventory":bag.slots.duplicate(true),"jobs":crafts.jobs.duplicate(true),"stats":stats.duplicate(true),"hour":hour,"elapsed":elapsed,"resources":resource_data.duplicate(true),"corpses":corpses.duplicate(true)}
 
 func save_world(notify: bool = true) -> void:
 	if not ready_to_play:
@@ -397,3 +449,60 @@ func finish_import(arguments: Array) -> void:
 		return
 	ready_to_play = false
 	get_tree().call_deferred("reload_current_scene")
+
+func hammer_action(upgrading: bool, repairing: bool = false) -> void:
+	if active_id()!="hammer" or int(bag.slots[selected].condition)<=0:
+		say("Select a working building hammer.")
+		return
+	if player.hit.is_empty() or not player.hit.collider.has_meta("structure"):
+		return
+	var id: String = str(player.hit.collider.get_meta("structure"))
+	var ok: bool = false
+	if upgrading:
+		ok = settlement.upgrade(id,bag)
+	elif repairing:
+		ok = settlement.repair(id,bag)
+	else:
+		ok = settlement.dismantle(id)
+	if ok:
+		wear_tool()
+		save_world(false)
+		say("Structure upgraded." if upgrading else "Structure repaired." if repairing else "Structure dismantled; unsupported pieces collapsed. No refund.")
+	else:
+		say("No change: check materials/tier/health; empty every affected container before dismantling.")
+
+func open_station(id: String) -> void:
+	station_id = id
+	menu_open = true
+	build_mode = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	hud.show_station(id)
+
+func toggle_station() -> void:
+	var p: Dictionary = settlement.find(station_id)
+	if p.is_empty() or p.kind=="storage":
+		return
+	p.active = not p.active
+	settlement.changed.emit()
+	save_world(false)
+	hud.refresh_station()
+
+func station_transfer(from_player: bool) -> void:
+	var p: Dictionary = settlement.find(station_id)
+	if p.is_empty():
+		return
+	var target = Inventory.new(12)
+	target.slots = p.inventory
+	var source = bag if from_player else target
+	var destination = target if from_player else bag
+	for i in range(source.slots.size()):
+		var stack: Dictionary = source.slots[i]
+		if stack.is_empty():
+			continue
+		var remainder: int = destination.add(stack.id,int(stack.count),int(stack.condition))
+		stack.count = remainder
+		if remainder==0:
+			source.slots[i] = {}
+	bag.changed.emit()
+	save_world(false)
+	hud.refresh_station()

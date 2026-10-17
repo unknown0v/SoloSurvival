@@ -1,4 +1,5 @@
 extends SceneTree
+const Settlement = preload("res://scripts/core/settlement.gd")
 const Inventory = preload("res://scripts/core/inventory.gd")
 const Crafting = preload("res://scripts/core/crafting.gd")
 const Save = preload("res://scripts/core/save_store.gd")
@@ -81,6 +82,137 @@ func domain_tests() -> void:
 	check(math.height(319,319)<0,"Island edges are underwater")
 	check(is_equal_approx(math.height(20,30),WorldMath.new().height(20,30)),"World is deterministic")
 
+func construction_tests() -> void:
+	var model = Settlement.new()
+	var bag = Inventory.new(36)
+	bag.add("wood",5000)
+	bag.add("stone",3000)
+	bag.add("metal",1000)
+	var unsupported: Dictionary = model.make_piece("wall",[0,0],10,0,0)
+	check(model.place(unsupported,bag).is_empty(),"Unsupported walls cannot be built")
+	var before: int = bag.count_item("wood")
+	var foundation: Dictionary = model.place(model.make_piece("foundation",[0,0],10,0,0),bag)
+	check(not foundation.is_empty() and bag.count_item("wood")==before-30,"Foundation atomically charges resources")
+	check(model.place(model.make_piece("foundation",[0,0],10,0,0),bag).is_empty(),"Duplicate socket rejected")
+	var wall: Dictionary = model.place(unsupported,bag)
+	check(not wall.is_empty(),"Wall snaps to foundation")
+	var frame: Dictionary = model.place(model.make_piece("doorframe",[0,0],10,0,1),bag)
+	var door: Dictionary = model.place(model.make_piece("door",[0,0],10,0,1),bag)
+	check(not frame.is_empty() and not door.is_empty(),"Door fits supported frame")
+	check(model.place(model.make_piece("door",[0,0],10,0,2),bag).is_empty(),"Door without frame rejected")
+	var floor_piece: Dictionary = model.place(model.make_piece("floor",[0,0],10,1,0),bag)
+	check(not floor_piece.is_empty(),"Upper floor derives support from walls")
+	var overhang: Dictionary = model.place(model.make_piece("floor",[1,0],10,1,0),bag)
+	check(not overhang.is_empty(),"One adjacent floor cantilevers with reduced integrity")
+	check(model.place(model.make_piece("floor",[2,0],10,1,0),bag).is_empty(),"Excessive cantilever rejected")
+	var upper: Dictionary = model.place(model.make_piece("wall",[0,0],10,1,0),bag)
+	var roof: Dictionary = model.place(model.make_piece("roof",[0,0],10,2,0),bag)
+	check(not upper.is_empty() and not roof.is_empty(),"Upper wall and roof retain a support path")
+	check(model.upgrade(wall.id,bag) and wall.tier==1 and wall.hp==250,"Wood upgrade applies health and cost")
+	check(model.upgrade(wall.id,bag) and wall.tier==2,"Stone upgrade succeeds")
+	check(model.upgrade(wall.id,bag) and wall.tier==3,"Metal upgrade succeeds")
+	check(not model.upgrade(wall.id,bag),"Maximum upgrade cannot charge again")
+	check(model.strike(wall.id,30) and wall.hp==970,"Construction damage reduces health")
+	check(model.repair(wall.id,bag) and wall.hp==1000,"Repair consumes material and restores health")
+	var storage: Dictionary = model.place(model.make_piece("storage",[0,0],10,0,0),bag)
+	var box = Inventory.new(12)
+	box.slots = storage.inventory
+	box.add("ore",20)
+	check(not model.dismantle(foundation.id) and model.find(storage.id).inventory==box.slots,"Collapse cannot discard stored contents")
+	var restored = Settlement.new()
+	restored.pieces = JSON.parse_string(JSON.stringify(model.pieces))
+	check(Settlement.valid(restored.pieces),"Structure graph and stored items survive JSON roundtrip")
+	var bad: Array = restored.pieces.duplicate(true)
+	bad[0].hp = -2
+	check(not Settlement.valid(bad),"Malformed structure health rejected")
+	bad = restored.pieces.duplicate(true)
+	bad.append(bad[0].duplicate(true))
+	check(not Settlement.valid(bad),"Duplicate construction identity rejected")
+	box.remove("ore",20)
+	check(model.dismantle(frame.id) and model.find(door.id).is_empty(),"Removing a frame collapses its door")
+	check(model.dismantle(foundation.id) and model.pieces.is_empty(),"Removing the root collapses unsupported graph")
+	var fire: Dictionary
+	var furnace: Dictionary
+	model.place(model.make_piece("foundation",[0,0],10,0,0),bag)
+	fire = model.place(model.make_piece("campfire",[0,0],10,0,0),bag)
+	furnace = model.place(model.make_piece("furnace",[0,0],10,0,0),bag)
+	var inputs = Inventory.new(12)
+	inputs.slots = fire.inventory
+	inputs.add("berries",4)
+	inputs.add("wood",4)
+	fire.active = true
+	model.tick(4)
+	check(inputs.count_item("cooked_berries")==0 and fire.progress==4,"Cooking waits for simulated time")
+	model.tick(1)
+	check(inputs.count_item("cooked_berries")==1 and inputs.count_item("berries")==2 and inputs.count_item("wood")==3,"Cooking consumes exactly one recipe batch")
+	var ore_bag = Inventory.new(12)
+	ore_bag.slots = furnace.inventory
+	ore_bag.add("ore",4)
+	ore_bag.add("wood",2)
+	furnace.active = true
+	model.tick(8)
+	check(ore_bag.count_item("metal")==1 and ore_bag.count_item("ore")==2,"Furnace smelts ore with wood fuel")
+	furnace.active = false
+	model.tick(8)
+	check(ore_bag.count_item("metal")==1,"Stopped furnace does not process")
+	ore_bag.slots = Inventory.new(12).slots
+	furnace.inventory = ore_bag.slots
+	ore_bag.add("ore",1000)
+	ore_bag.add("wood",1000)
+	for i in range(10):
+		ore_bag.add("stone",1000)
+	furnace.active = true
+	model.tick(8)
+	check(ore_bag.count_item("ore")==1000 and ore_bag.count_item("wood")==1000,"Full output inventory preserves ingredients and fuel")
+	var world: Dictionary = fixture()
+	check(Save.unwrap(Save.encode_save(world)).has("data"),"Unmodified milestone-one save still loads")
+	world.version = 2
+	world.structures = model.pieces.duplicate(true)
+	check(Save.validate(world)=="","Version-two save validates stations and structures")
+	world.structures = [{"kind":"unknown"}]
+	check(Save.validate(world)!="","Invalid version-two extension rejected")
+
+func browser_fixture(game) -> void:
+	# Import a real version-one save through the browser file chooser, not a game command bridge.
+	var math = game.world.math
+	for z in range(-75,60):
+		for x in range(-75,60):
+			var wx: float = x*3.0
+			var wz: float = z*3.0
+			var h: float = math.height(wx,wz)
+			var y: float = snappedf(h+0.4,0.25)
+			if h<3 or h>45:
+				continue
+			var clear: bool = true
+			for dx in [-1.4,0,1.4]:
+				for dz in [-1.4,0,1.4]:
+					var sample: float = math.height(wx+dx,wz+dz)
+					if sample>y or y-sample>0.75:
+						clear = false
+			for resource in game.world.nodes.values():
+				if Vector2(resource.body.position.x-wx,resource.body.position.z-wz).length()<8:
+					clear = false
+			if not clear:
+				continue
+			var data: Dictionary = fixture()
+			var inv = Inventory.new(36)
+			inv.add("rock",1)
+			inv.add("building_plan",1)
+			inv.add("hammer",1)
+			inv.add("wood",1000)
+			inv.add("stone",1000)
+			inv.add("ore",40)
+			inv.add("berries",20)
+			data.inventory = inv.slots
+			data.position = [wx,math.height(wx,wz+4.3)+0.05,wz+4.3]
+			data.pitch = -atan2(float(data.position[1])+1.65-y,4.3)
+			data.hour = 12
+			DirAccess.make_dir_recursive_absolute("res://build")
+			write_text("res://build/milestone1-fixture.json",Save.encode_save(data))
+			print("CONSTRUCTION_BROWSER_FIXTURE cell="+str([x,z])+" y="+str(y))
+			return
+	check(false,"Find dry unobstructed terrain for browser construction fixture")
+
 func save_tests() -> void:
 	var path: String = "user://cloud-tests-"+str(Time.get_ticks_usec())+".json"
 	var store = Save.new(path)
@@ -117,10 +249,12 @@ func save_tests() -> void:
 
 func run_tests() -> void:
 	domain_tests()
+	construction_tests()
 	save_tests()
 	var game = Game.new()
 	root.add_child(game)
 	await game.world_ready
+	browser_fixture(game)
 	check(game.world.nodes.size()>100,"Real world generates resource nodes")
 	game.playing = true
 	for i in range(90):

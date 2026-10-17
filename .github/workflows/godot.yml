@@ -56,7 +56,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/browser/node_modules" xvfb-run --auto-servernum node tools/browser_smoke.cjs
       - name: Write validation summary
         run: |
-          echo "### First milestone validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SoloSurvival validation" >> "$GITHUB_STEP_SUMMARY"
           echo "Godot 4.7.2: imported; domain + real-scene headless tests; Web + Windows exported; Chromium software-WebGL startup, gathering, movement, save/reload checks passed." >> "$GITHUB_STEP_SUMMARY"
           echo "No human playtest or laptop performance claim. Validated branch builds are published as free GitHub release assets. No Actions artifact or cache storage is used." >> "$GITHUB_STEP_SUMMARY"
       - name: Publish build downloads without Actions artifact or cache storage
@@ -70,7 +70,7 @@ jobs:
             test "$target" = "$GITHUB_SHA" || { echo "Existing preview belongs to another commit; left untouched."; exit 1; }
             echo "This source commit already has an immutable preview; preserving its assets."
           else
-            gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival first playable (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
+            gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival construction preview (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
           fi
 
       - name: Publish validated browser build to free GitHub Pages

@@ -1,6 +1,15 @@
 extends CanvasLayer
 const Slot = preload("res://scripts/ui/item_slot.gd")
 var game
+var station_panel: VBoxContainer
+var station_title: Label
+var station_status: Label
+var station_grid: GridContainer
+var station_slots: Array = []
+var station_inventory
+var station_toggle: Button
+var tabs: TabContainer
+var ui_buttons: Dictionary = {}
 var root: Control
 var title: PanelContainer
 var title_text: Label
@@ -30,6 +39,7 @@ func label(text: String, size: int = 16, color: Color = Color("#e0e4d9")) -> Lab
 func button(text: String, action: Callable) -> Button:
 	var node := Button.new()
 	node.text = text
+	ui_buttons[text] = node
 	node.custom_minimum_size.y = 38
 	node.focus_mode = Control.FOCUS_NONE
 	node.pressed.connect(action)
@@ -150,18 +160,18 @@ func build_title() -> void:
 
 func build_inventory() -> void:
 	menu = PanelContainer.new()
-	menu.position = Vector2(65,58)
-	menu.size = Vector2(1150,590)
+	menu.position = Vector2(45,45)
+	menu.size = Vector2(1190,610)
 	skin(menu)
 	root.add_child(menu)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",26)
+	row.add_theme_constant_override("separation",20)
 	menu.add_child(row)
 	var left := VBoxContainer.new()
 	left.custom_minimum_size.x = 460
 	row.add_child(left)
-	left.add_child(label("YOUR INVENTORY",26,Color("#e2d4b2")))
-	left.add_child(label("Drag to move · Shift-drag for half · Right click to split",12))
+	left.add_child(label("YOUR INVENTORY",24,Color("#e2d4b2")))
+	left.add_child(label("Drag to move · Shift-drag half · Right click split",12))
 	var grid := GridContainer.new()
 	grid.columns = 6
 	grid.add_theme_constant_override("h_separation",5)
@@ -173,15 +183,22 @@ func build_inventory() -> void:
 		grid.add_child(slot)
 		all_slots.append(slot)
 	left.add_child(button("USE SELECTED ITEM",func(): game.use_item(game.inspected_slot)))
-	left.add_child(button("SAVE AND RETURN TO ISLAND  /  TAB",func():
+	left.add_child(button("SAVE AND RETURN  /  TAB",func():
 		game.save_world()
 		game.toggle_inventory()
 	))
+	tabs = TabContainer.new()
+	tabs.custom_minimum_size = Vector2(640,550)
+	row.add_child(tabs)
+	var scroll := ScrollContainer.new()
+	scroll.name = "Crafting"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tabs.add_child(scroll)
 	var right := VBoxContainer.new()
-	right.custom_minimum_size.x = 540
-	row.add_child(right)
-	right.add_child(label("CRAFTING",26,Color("#e2d4b2")))
-	right.add_child(label("Ingredients are reserved when you queue a recipe.",13))
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(right)
+	right.add_child(label("CRAFTING",24,Color("#e2d4b2")))
+	right.add_child(label("Ingredients reserved on queue. Scroll for recipes.",13))
 	for id in game.items.RECIPES:
 		var recipe: Dictionary = game.items.RECIPES[id]
 		var cost: String = ""
@@ -190,23 +207,82 @@ func build_inventory() -> void:
 		var text: String = "%s  ·  %ds\n%s" % [game.items.ITEMS[id].name,int(recipe.time),cost]
 		var recipe_id: String = str(id)
 		var recipe_button := button(text,func(): game.queue_craft(recipe_id))
-		recipe_button.custom_minimum_size.y = 58
+		recipe_button.custom_minimum_size.y = 54
 		right.add_child(recipe_button)
 		recipe_buttons[id] = recipe_button
-	right.add_child(label("QUEUE  /  CLICK TO CANCEL AND REFUND",13,Color("#a6b59d")))
+	right.add_child(label("QUEUE / CLICK TO CANCEL AND REFUND",13,Color("#a6b59d")))
 	for i in range(8):
 		var index: int = i
 		var job_button := button("",func():
 			if not game.crafts.cancel(index,game.bag):
 				game.say("Refund needs more inventory room.")
 		)
-		job_button.custom_minimum_size.y = 21
+		job_button.custom_minimum_size.y = 24
 		job_button.add_theme_font_size_override("font_size",12)
 		right.add_child(job_button)
 		queue_buttons.append(job_button)
+	var guide := VBoxContainer.new()
+	guide.name = "Building guide"
+	tabs.add_child(guide)
+	guide.add_child(label("BUILD YOUR SHORELINE HOME",24))
+	guide.add_child(label("Craft a building plan and hammer. Press B to build.\n1 foundation · 2 wall · 3 floor · 4 roof\n5 doorframe · 6 door · 7 storage · 8 fire · 9 furnace\nR rotates; green preview = valid; left click places.\n\nFoundations need dry, flat ground. Walls stand on\nfoundations/floors. Floors/roofs sit above walls.\nDoors fit doorframes; stations sit on platforms.\nAim at the supporting section to select its level.\n\nHammer selected: click repair · U upgrade · X dismantle.\nTwig → wood → stone → metal. Aim for costs/status.\nRemoving support collapses unsupported pieces.\nEmpty ALL affected containers before dismantling.\nNo demolition refund. Max 256 pieces, four storeys.\n\nE opens a station or toggles a door. Drag items between\nyour bag and its slots. Fire: 2 berries + 1 wood → ration.\nFurnace: 2 ore + 1 wood → metal. Start the station.\nOutputs wait when full; no offline processing.",16))
+	station_panel = VBoxContainer.new()
+	station_panel.name = "Container"
+	tabs.add_child(station_panel)
+	station_title = label("AIM AT A STATION AND PRESS E",22)
+	station_panel.add_child(station_title)
+	station_status = label("",15)
+	station_panel.add_child(station_status)
+	station_grid = GridContainer.new()
+	station_grid.columns = 6
+	station_panel.add_child(station_grid)
+	station_toggle = button("START / STOP PROCESSING",game.toggle_station)
+	station_panel.add_child(station_toggle)
+	station_panel.add_child(button("DEPOSIT ALL THAT FITS",func(): game.station_transfer(true)))
+	station_panel.add_child(button("TAKE ALL THAT FITS",func(): game.station_transfer(false)))
 	menu.hide()
 
+func show_station(id: String) -> void:
+	var p: Dictionary = game.settlement.find(id)
+	if p.is_empty():
+		return
+	for slot in station_slots:
+		station_grid.remove_child(slot)
+		slot.queue_free()
+	station_slots.clear()
+	station_inventory = game.Inventory.new(12)
+	station_inventory.slots = p.inventory
+	for i in range(12):
+		var slot := Slot.new()
+		slot.setup(game,station_inventory,i)
+		station_grid.add_child(slot)
+		station_slots.append(slot)
+	tabs.current_tab = 2
+	refresh_station()
+
+func refresh_station() -> void:
+	var p: Dictionary = game.settlement.find(game.station_id)
+	var available: bool = not p.is_empty()
+	station_title.text = p.kind.to_upper() if available else "AIM AT A STATION AND PRESS E"
+	station_grid.visible = available
+	station_toggle.visible = available and p.kind!="storage"
+	station_status.text = ("RUNNING" if p.active else "STOPPED")+" · "+str(snappedf(float(p.progress),0.1))+" s\n"+("2 berries + 1 wood → ration (5 s)" if p.kind=="campfire" else "2 ore + 1 wood → metal (8 s)" if p.kind=="furnace" else "12 slots · contents save with the world") if available else ""
+	for slot in station_slots:
+		slot.refresh()
+
+func diagnostics() -> Dictionary:
+	var result: Dictionary = {}
+	for key in ui_buttons:
+		var node: Button = ui_buttons[key]
+		if is_instance_valid(node) and node.is_visible_in_tree() and key!="":
+			var rect: Rect2 = node.get_global_rect()
+			result[key] = [rect.get_center().x,rect.get_center().y]
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	return {"buttons":result,"size":[size.x,size.y]}
+
 func refresh() -> void:
+	if station_panel!=null:
+		refresh_station()
 	for slot in all_slots:
 		slot.refresh()
 	for id in recipe_buttons:

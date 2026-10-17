@@ -60,6 +60,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotation.y = wrapf(rotation.y-event.screen_relative.x*sensitivity,-PI,PI)
 		pitch = clampf(pitch-event.screen_relative.y*sensitivity,-1.45,1.45)
 	if event is InputEventMouseButton and event.pressed and game.playing and not game.menu_open and not game.paused:
+		if game.build_mode and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
+			return
 		if event.button_index==MOUSE_BUTTON_LEFT and cooldown<=0:
 			cooldown = 0.65
 			game.primary_action()
@@ -107,7 +109,7 @@ func _physics_process(dt: float) -> void:
 	if swimming:
 		velocity.y = move_toward(velocity.y,2.4 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else 0.7 if position.y < -1.3 else -0.2,dt*4)
 	elif is_on_floor():
-		velocity.y = 6 if Input.is_physical_key_pressed(KEY_SPACE) else -2
+		velocity.y = 6 if not blocked and Input.is_physical_key_pressed(KEY_SPACE) else -2
 	else:
 		velocity.y -= 18*dt
 	var impact_speed: float = velocity.y
@@ -131,11 +133,18 @@ func _physics_process(dt: float) -> void:
 	if not blocked and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and cooldown<=0:
 		cooldown = 0.65
 		game.primary_action()
-	game.prompt = "" if blocked else interaction_prompt()
+	if not game.build_mode:
+		game.prompt = "" if blocked else interaction_prompt()
 
 func interaction_prompt() -> String:
 	if not hit.is_empty():
 		var body: Object = hit.collider
+		if body.has_meta("structure"):
+			var p: Dictionary = game.settlement.find(str(body.get_meta("structure")))
+			if p.is_empty():
+				return ""
+			var integrity: float = float(game.buildings.integrity.get(p.id,0))
+			return "%s %s · %d/%d HP · %d%% SUPPORT\n%s" % [game.Settlement.TIERS[int(p.tier)],p.kind.to_upper(),int(p.hp),int(game.Settlement.max_health(p)),roundi(integrity*100),"E OPEN / CLOSE" if p.kind=="door" else "E OPEN CONTAINER" if game.Settlement.station(p.kind) else "HAMMER: CLICK REPAIR · U UPGRADE · X DISMANTLE"]
 		if body.has_meta("resource"):
 			var kind: String = game.world.nodes[str(body.get_meta("resource"))].kind
 			return "E  HARVEST HEMP" if kind=="cloth" else "E  PICK BERRIES" if kind=="berries" else "STRIKE TO GATHER  /  "+("WOOD" if kind=="tree" else kind.to_upper())
@@ -157,7 +166,7 @@ func update_model(dt: float) -> void:
 		var wood: Material = art.material("wood",Color("#8a6e4d"))
 		if item=="rock":
 			art.rock(model,Vector3.ZERO,Vector3(0.14,0.11,0.17),stone,2)
-		elif item in ["axe","pickaxe"]:
+		elif item in ["axe","pickaxe","hammer"]:
 			var handle: MeshInstance3D = art.cylinder(model,Vector3(0,-0.08,0),0.018,0.42,wood,0.012)
 			handle.rotation.z = -0.2
 			art.rock(model,Vector3(-0.01,0.12,0),Vector3(0.12,0.075,0.04) if item=="axe" else Vector3(0.18,0.035,0.04),stone)
