@@ -65,7 +65,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="preview-${GITHUB_SHA:0:12}"
-          gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival first playable (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
+          if gh release view "$tag" --json targetCommitish >/tmp/preview-release.json 2>/dev/null; then
+            target="$(python3 -c 'import json; print(json.load(open("/tmp/preview-release.json"))["targetCommitish"])')"
+            test "$target" = "$GITHUB_SHA" || { echo "Existing preview belongs to another commit; left untouched."; exit 1; }
+            echo "This source commit already has an immutable preview; preserving its assets."
+          else
+            gh release create "$tag" build/SoloSurvival-web.zip build/SoloSurvival-windows.zip build/browser-smoke.png --target "$GITHUB_SHA" --prerelease --title "SoloSurvival first playable (${GITHUB_SHA:0:7})" --notes "Automated Godot headless validation and Chromium software-WebGL smoke checks passed for this commit. Web and unsigned Windows builds. No human playtest or Rust fidelity claim."
+          fi
 
       - name: Publish validated browser build to free GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/codex/godot-first-playable'
