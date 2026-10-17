@@ -6,15 +6,19 @@ const WorldMath = preload("res://scripts/core/world_math.gd")
 const Game = preload("res://scripts/game.gd")
 var failures: Array = []
 var assertions: int = 0
+var finished: bool = false
+var watchdog_timer: SceneTreeTimer
 
 func _initialize() -> void:
 	call_deferred("run_tests")
 	call_deferred("watchdog")
 
 func watchdog() -> void:
-	await create_timer(100).timeout
-	printerr("TEST TIMEOUT")
-	quit(1)
+	watchdog_timer = create_timer(100)
+	await watchdog_timer.timeout
+	if not finished:
+		printerr("TEST TIMEOUT")
+		quit(1)
 
 func check(condition: bool, description: String) -> void:
 	assertions += 1
@@ -134,5 +138,8 @@ func run_tests() -> void:
 	check(game.save_count>0,"Real world saves to disk")
 	game.queue_free()
 	await process_frame
+	finished = true
+	watchdog_timer.time_left = 0
+	await create_timer(0.05).timeout
 	print("SOLOSURVIVAL_TESTS assertions=%d failures=%d" % [assertions,failures.size()])
 	quit(0 if failures.is_empty() else 1)

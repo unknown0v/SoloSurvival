@@ -8,6 +8,8 @@ Development branch: [codex/godot-first-playable](https://github.com/unknown0v/So
 
 Validated Web and unsigned Windows ZIPs are published to [GitHub Releases](https://github.com/unknown0v/SoloSurvival/releases) after the cloud pipeline passes. If no preview release exists, no build has passed all checks yet.
 
+See [hosting and account setup](Documentation/HOSTING.md) for the prepared itch.io deployment workflow.
+
 The Web ZIP contains the actual Godot WebAssembly game. It must be served over HTTP(S), such as an itch.io HTML5 project; opening index.html directly from disk does not work. No engine installation is needed to play a hosted Web build. Windows ZIPs run normally after extraction; the native build is unsigned and not independently tested on Windows yet.
 
 ## Controls
@@ -32,7 +34,7 @@ Begin with a rock and torch. Strike nearby trees and pale stone nodes, harvest h
 
 Autosave runs every 30 simulated seconds; pause, F5 and quit also save. The island seed, location, inventory, crafting queue, health/food/water, clock, resource depletion and death containers persist. Time does not advance while the game is paused or closed.
 
-Web saves use Godot's browser filesystem backed by IndexedDB. Private browsing, denied storage, iframe restrictions, changing the hosting origin or clearing site data can lose saves. Download and retain a JSON backup. A save on one browser/device is not a cloud save. Unknown future save formats and invalid files are preserved instead of silently overwritten.
+Web saves use Godot's browser filesystem backed by IndexedDB. Private browsing, denied storage, iframe restrictions, changing the hosting origin or clearing site data can lose saves. Download and retain a JSON backup; the title/pause menu can restore it after validation, retaining copies of previous save files. A save on one browser/device is not a cloud save. Unknown future save formats and invalid files are preserved instead of silently overwritten.
 
 ## Cloud development, validation and builds
 

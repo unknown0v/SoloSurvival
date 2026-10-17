@@ -2,7 +2,18 @@
 from pathlib import Path
 import json
 import sys
+import shutil
+import urllib.request
 import zipfile
+
+for name in ["LICENSE.txt", "COPYRIGHT.txt"]:
+    url = "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/" + name
+    with urllib.request.urlopen(url, timeout=30) as response:
+        notice = response.read()
+    for directory in ["build/web", "build/windows"]:
+        Path(directory, "GODOT-" + name).write_bytes(notice)
+for directory in ["build/web", "build/windows"]:
+    shutil.copyfile("LICENSE", Path(directory, "SOLOSURVIVAL-LICENSE.txt"))
 
 root = Path("build/web")
 files = [p for p in root.rglob("*") if p.is_file()]

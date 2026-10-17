@@ -13,16 +13,18 @@ const assert = require('node:assert/strict');
   });
   try {
     await page.goto('http://127.0.0.1:8060/index.html',{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(() => window.__soloSurvivalState?.ready,{timeout:120000});
+    await page.waitForFunction(() => window.__soloSurvivalState?.ready,null,{timeout:120000});
     assert.ok((await page.evaluate(() => window.__soloSurvivalState.nodes))>100);
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.__soloSurvivalState.playing);
     await page.waitForTimeout(1800);
+    console.log('BEFORE_GATHER '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState)));
     // The guaranteed tree is directly in front of the initial camera.
     await page.mouse.click(640,360);
     await page.waitForTimeout(900);
     await page.mouse.click(640,360);
-    await page.waitForFunction(() => window.__soloSurvivalState.wood>0,{timeout:15000});
+    console.log('AFTER_GATHER '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState)));
+    await page.waitForFunction(() => window.__soloSurvivalState.wood>0,null,{timeout:15000});
     const before = await page.evaluate(() => window.__soloSurvivalState);
     await page.keyboard.down('KeyD');
     await page.waitForTimeout(1100);
@@ -36,12 +38,17 @@ const assert = require('node:assert/strict');
     const saved = await page.evaluate(() => window.__soloSurvivalState);
     await page.screenshot({path:'build/browser-smoke.png'});
     await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForFunction(() => window.__soloSurvivalState?.ready,{timeout:120000});
+    await page.waitForFunction(() => window.__soloSurvivalState?.ready,null,{timeout:120000});
     const restored = await page.evaluate(() => window.__soloSurvivalState);
     assert.ok(restored.wood>=saved.wood,'Inventory restored across browser reload');
     assert.ok(Math.abs(restored.position[0]-saved.position[0])<0.5,'Position restored across browser reload');
     assert.deepEqual(errors,[],'No script/runtime errors');
     console.log('BROWSER_SMOKE_PASS '+JSON.stringify({before,after,saved,restored}));
+  } catch (error) {
+    console.log('FAILURE_STATE '+JSON.stringify(await page.evaluate(() => window.__soloSurvivalState).catch(() => null)));
+    const shot = await page.screenshot({type:'jpeg',quality:45});
+    console.log('DIAGNOSTIC_SCREENSHOT_BASE64='+shot.toString('base64'));
+    throw error;
   } finally {
     if (errors.length) console.error(errors.join('\n'));
     await context.close();

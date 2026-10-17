@@ -33,6 +33,7 @@ var world_timer: float = 0
 var web_timer: float = 0
 var save_count: int = 0
 var corpse_serial: int = 0
+var import_callback
 signal world_ready
 
 func _ready() -> void:
@@ -142,7 +143,7 @@ func _process(dt: float) -> void:
 	if OS.has_feature("web") and web_timer>=0.25:
 		web_timer = 0
 		# Read-only diagnostics used by cloud browser smoke tests.
-		var report: Dictionary = {"ready":true,"playing":playing,"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
+		var report: Dictionary = {"ready":true,"playing":playing,"paused":paused,"menu":menu_open,"mouse":Input.mouse_mode,"hit":str(player.hit.get("collider","")),"prompt":prompt,"fps":Engine.get_frames_per_second(),"position":[player.position.x,player.position.y,player.position.z],"ground":world.math.height(player.position.x,player.position.z),"nodes":world.nodes.size(),"wood":bag.count_item("wood"),"saves":save_count,"health":stats.health,"hour":hour}
 		JavaScriptBridge.eval("window.__soloSurvivalState="+JSON.stringify(report),true)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -357,3 +358,32 @@ func _notification(what: int) -> void:
 		save_world(false)
 		paused = true
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func import_backup() -> void:
+	if not OS.has_feature("web"):
+		say("Native saves load automatically. Backups are in the local save directory.")
+		return
+	import_callback = JavaScriptBridge.create_callback(finish_import)
+	var window = JavaScriptBridge.get_interface("window")
+	window.__soloSurvivalImport = import_callback
+	JavaScriptBridge.eval("(function(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{try{const f=input.files[0];if(!f||f.size>2097152){window.__soloSurvivalImport('');return;}window.__soloSurvivalImport(await f.text());}catch(e){window.__soloSurvivalImport('');}};input.click();})()",true)
+
+func finish_import(arguments: Array) -> void:
+	if arguments.is_empty() or not arguments[0] is String or arguments[0]=="":
+		say("No valid backup selected.")
+		return
+	var result: Dictionary = SaveStore.unwrap(arguments[0])
+	if result.has("error"):
+		say("Backup rejected: "+str(result.error))
+		return
+	var suffix: String = ".before-import-"+str(Time.get_unix_time_from_system()).replace(".","-")
+	for path in [saves.path,saves.path+".bak"]:
+		if FileAccess.file_exists(path) and DirAccess.copy_absolute(path,path+suffix)!=OK:
+			say("Could not preserve existing saves. Import cancelled.")
+			return
+	saves.writable = true
+	if not saves.write(result.data):
+		say(saves.message)
+		return
+	ready_to_play = false
+	get_tree().call_deferred("reload_current_scene")

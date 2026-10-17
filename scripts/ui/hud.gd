@@ -143,6 +143,8 @@ func build_title() -> void:
 	content.add_child(start_button)
 	content.add_child(button("SAVE WORLD",func(): game.save_world()))
 	content.add_child(button("DOWNLOAD SAVE BACKUP",game.download_save))
+	if OS.has_feature("web"):
+		content.add_child(button("RESTORE SAVE BACKUP",game.import_backup))
 	content.add_child(label("Independent work in progress · Original procedural art\nBrowser saves belong to this browser and origin. Keep a backup.",12,Color("#a3afa4")))
 
 func build_inventory() -> void:
